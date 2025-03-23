@@ -1,0 +1,14 @@
+[project]
+name = "scara-robotic-arm"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "opencv-contrib-python>=4.11.0.86",
+    "pygame>=2.6.1",
+    "pymunk>=6.11.1",
+    "smbus>=1.1.post2",
+    "smbus2>=0.5.0",
+    "ticlib>=0.2.2",
+]
