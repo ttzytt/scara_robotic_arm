@@ -80,15 +80,8 @@ class ParaScaraKinematics:
         root_val = sqrt(inside_sqrt)
         for sign in (+1, -1):
             # sign is for the two possible solutions of theta 2
-            num_top = A + sign * root_val
-            den = B - C
-
-            if abs(den) < 1e-12:
-                continue
-
-            rt_link_ang = 2 * atan2(num_top, den)
+            rt_link_ang = 2 * atan2(A + sign * root_val, B - C)
             # rt_link_ang is the solution for theta 2
-
             num_asin = (
                 l2p * sin(rt_link_ang)
                 + l1p * sin(q2)
@@ -101,9 +94,12 @@ class ParaScaraKinematics:
                     # condiate is different solutions for theta 1
                     x = l1 * cos(q1) + l2 * cos(candidate)
                     y = l1 * sin(q1) + l2 * sin(candidate)  
-                    solutions.append(ForwardSolution(x * DEF_LEN_UNIT, y * DEF_LEN_UNIT,
-                                        (candidate * ur.rad).to(DEF_ANG_UNIT),    # type: ignore
-                                        (rt_link_ang * ur.rad).to(DEF_ANG_UNIT))) # type: ignore
+                    x_sol2 = d + l1p * cos(q2) + l2p * cos(rt_link_ang)
+                    y_sol2 = l1p * sin(q2) + l2p * sin(rt_link_ang)
+                    if abs(x - x_sol2) < 1e-10 and abs(y - y_sol2) < 1e-10:
+                        solutions.append(ForwardSolution(x * DEF_LEN_UNIT, y * DEF_LEN_UNIT,
+                                            (candidate * ur.rad).to(DEF_ANG_UNIT),    # type: ignore
+                                            (rt_link_ang * ur.rad).to(DEF_ANG_UNIT))) # type: ignore
 
         return solutions
 
@@ -151,6 +147,9 @@ class ParaScaraKinematics:
             sign2 = 1 if m[1] == "+" else -1
             q1 = theta + sign1 * gamma
             q2 = pi - psi + sign2 * epsilon
+            
+            # TODO: add angle for second-level arm
+
             results.append(
                 InverseResult(
                     (q1 * ur.rad).to(DEF_ANG_UNIT),  # type: ignore
