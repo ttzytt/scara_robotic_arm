@@ -1,5 +1,6 @@
 from dataclasses import dataclass
 from math import sin, cos, atan2, acos, asin, sqrt, pi, atan
+from turtle import rt
 from typing import List, TypeAlias
 import pint
 from pint._typing import QuantityOrUnitLike
@@ -15,42 +16,38 @@ class ParaScaraSetup:
     rt_link_len: pqt
     axis_dist: pqt
 
+@dataclass
+class ParaScaraState: 
+    end_effector_pos : tup_qq
+    lf_base_endpos   : tup_qq
+    rt_base_endpos   : tup_qq
+
+    lf_base_ang      : pqt
+    rt_base_ang      : pqt
+    lf_link_ang      : pqt
+    rt_link_ang      : pqt
+
+    def to_unit(self, dis_unit: QuantityOrUnitLike, ang_unit: QuantityOrUnitLike) -> "ParaScaraState":
+        return ParaScaraState(
+            (self.end_effector_pos[0].to(dis_unit), self.end_effector_pos[1].to(dis_unit)), # type: ignore
+            (self.lf_base_endpos[0].to(dis_unit), self.lf_base_endpos[1].to(dis_unit)),     # type: ignore
+            (self.rt_base_endpos[0].to(dis_unit), self.rt_base_endpos[1].to(dis_unit)),     # type: ignore
+            (self.touching_pt_pos[0].to(dis_unit), self.touching_pt_pos[1].to(dis_unit)),   # type: ignore
+            self.rt_link_ang.to(ang_unit), # type: ignore
+            self.lf_base_ang.to(ang_unit), # type: ignore
+            self.rt_base_ang.to(ang_unit), # type: ignore
+            self.lf_link_ang.to(ang_unit), # type: ignore
+        )
+
 
 class ParaScaraKinematics:
 
     # refer to this paper: https://cdn.hackaday.io/files/1733257415536800/Educational%20Five-bar%20parallel%20robot_.pdf
 
-    @dataclass
-    class ForwardResult:
-        x: pqt
-        y: pqt
-        lf_link_ang: pqt
-        rt_link_ang: pqt
-
-        def to(self, dis_unit: QuantityOrUnitLike, ang_unit: QuantityOrUnitLike) -> "ParaScaraKinematics.ForwardResult":
-            return ParaScaraKinematics.ForwardResult(
-                self.x.to(dis_unit),  # type: ignore
-                self.y.to(dis_unit),  # type: ignore
-                self.lf_link_ang.to(ang_unit),  # type: ignore
-                self.rt_link_ang.to(ang_unit)  # type: ignore
-            )
-
-    @dataclass
-    class InverseResult:
-        lf_base_ang: pqt
-        rt_base_ang: pqt
-
-        def to(self, ang_unit: QuantityOrUnitLike) -> "ParaScaraKinematics.InverseResult":
-            return ParaScaraKinematics.InverseResult(
-                self.lf_base_ang.to(ang_unit),  # type: ignore
-                self.rt_base_ang.to(ang_unit)   # type: ignore
-            )
-
     def __init__(self, setup: ParaScaraSetup):
         self.setup = setup
 
-    def forward_kinematics(self, lf_base_ang: pqt, rt_base_ang: pqt) -> List[ForwardResult]:
-        ForwardSolution = ParaScaraKinematics.ForwardResult
+    def forward_kinematics(self, lf_base_ang: pqt, rt_base_ang: pqt) -> List[ParaScaraState]:
         l1: float = self.setup.lf_base_len.to(DEF_LEN_UNIT).magnitude
         l2: float = self.setup.lf_link_len.to(DEF_LEN_UNIT).magnitude
         l1p: float = self.setup.rt_base_len.to(DEF_LEN_UNIT).magnitude
@@ -89,23 +86,34 @@ class ParaScaraKinematics:
             )   
             ratio = num_asin / l2
 
-            if -1.0 <= ratio <= 1.0:
-                for candidate in [asin(ratio), pi - asin(ratio)]:   
-                    # condiate is different solutions for theta 1
-                    x = l1 * cos(q1) + l2 * cos(candidate)
-                    y = l1 * sin(q1) + l2 * sin(candidate)  
-                    x_sol2 = d + l1p * cos(q2) + l2p * cos(rt_link_ang)
-                    y_sol2 = l1p * sin(q2) + l2p * sin(rt_link_ang)
-                    if abs(x - x_sol2) < 1e-10 and abs(y - y_sol2) < 1e-10:
-                        solutions.append(ForwardSolution(x * DEF_LEN_UNIT, y * DEF_LEN_UNIT,
-                                            (candidate * ur.rad).to(DEF_ANG_UNIT),    # type: ignore
-                                            (rt_link_ang * ur.rad).to(DEF_ANG_UNIT))) # type: ignore
+            if not (-1.0 <= ratio <= 1.0): return solutions
+
+            for lf_link_ang_candidate in [asin(ratio), pi - asin(ratio)]:   
+                # condiate is different solutions for theta 1
+                x = l1 * cos(q1) + l2 * cos(lf_link_ang_candidate)
+                y = l1 * sin(q1) + l2 * sin(lf_link_ang_candidate)  
+                x_sol2 = d + l1p * cos(q2) + l2p * cos(rt_link_ang)
+                y_sol2 = l1p * sin(q2) + l2p * sin(rt_link_ang)
+
+                if abs(x - x_sol2) > 1e-10 or abs(y - y_sol2) > 1e-10: continue
+
+                solutions.append(
+                    ParaScaraState(
+                        end_effector_pos=(x * DEF_LEN_UNIT, y * DEF_LEN_UNIT),
+                        lf_base_endpos=(cos(lf_base_ang) * l1 * DEF_LEN_UNIT, sin(lf_base_ang) * l1 * DEF_LEN_UNIT),
+                        rt_base_endpos=((cos(rt_base_ang) * l1p + d)* DEF_LEN_UNIT, sin(rt_base_ang) * l1p * DEF_LEN_UNIT),
+
+                        lf_base_ang=lf_base_ang.to(DEF_ANG_UNIT), # type: ignore
+                        rt_base_ang=rt_base_ang.to(DEF_ANG_UNIT), # type: ignore
+                        lf_link_ang=(lf_link_ang_candidate * ur.rad).to(DEF_ANG_UNIT), # type: ignore
+                        rt_link_ang=(rt_link_ang * ur.rad).to(DEF_ANG_UNIT), # type: ignore
+                    )
+                )
 
         return solutions
 
 
-    def inverse_kinematics(self, x_pos: pqt, y_pos: pqt, mode: str | List[str] = "+-") -> List[InverseResult]:
-        InverseResult = ParaScaraKinematics.InverseResult
+    def inverse_kinematics(self, x_pos: pqt, y_pos: pqt, mode: str | List[str] = "+-") -> List[ParaScaraState]:
         x: float = x_pos.to(DEF_LEN_UNIT).magnitude
         y: float = y_pos.to(DEF_LEN_UNIT).magnitude
         l1: float = self.setup.lf_base_len.to(DEF_LEN_UNIT).magnitude
@@ -138,7 +146,7 @@ class ParaScaraKinematics:
         else:
             modes = mode
 
-        results: List[InverseResult] = []
+        results: List[ParaScaraState] = []
         for m in modes:
             if m not in ("++", "+-", "-+", "--"):
                 raise ValueError(
@@ -150,10 +158,19 @@ class ParaScaraKinematics:
             
             # TODO: add angle for second-level arm
 
+            lf_base_endpos : tup_qq = (cos(q1) * l1 * DEF_LEN_UNIT, sin(q1) * l1 * DEF_LEN_UNIT)
+            rt_base_endpos : tup_qq = ((cos(q2) * l1p + d) * DEF_LEN_UNIT, sin(q2) * l1p * DEF_LEN_UNIT)
+            lf_link_ang = atan2(y - lf_base_endpos[1].magnitude, x - lf_base_endpos[0].magnitude)
+            rt_link_ang = atan2(y - rt_base_endpos[1].magnitude, x - rt_base_endpos[0].magnitude)
             results.append(
-                InverseResult(
-                    (q1 * ur.rad).to(DEF_ANG_UNIT),  # type: ignore
-                    (q2 * ur.rad).to(DEF_ANG_UNIT),  # type: ignore
+                ParaScaraState(
+                    end_effector_pos=(x_pos, y_pos),
+                    lf_base_endpos=lf_base_endpos,
+                    rt_base_endpos=rt_base_endpos,
+                    lf_base_ang=(q1 * ur.rad).to(DEF_ANG_UNIT), # type: ignore
+                    rt_base_ang=(q2 * ur.rad).to(DEF_ANG_UNIT), # type: ignore
+                    lf_link_ang=(lf_link_ang * ur.rad).to(DEF_ANG_UNIT), # type: ignore
+                    rt_link_ang=(rt_link_ang * ur.rad).to(DEF_ANG_UNIT), # type: ignore
                 )
             )
 
