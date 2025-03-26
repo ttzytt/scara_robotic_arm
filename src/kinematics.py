@@ -69,7 +69,7 @@ class ParaScaraKinematics:
 
 
         inside_sqrt = A**2 + B**2 - C**2
-        solutions: List[ForwardSolution] = []  # type: ignore
+        solutions: List[ParaScaraState] = []  # type: ignore
 
         if inside_sqrt < 0:
             return solutions
