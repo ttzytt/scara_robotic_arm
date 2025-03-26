@@ -1,8 +1,6 @@
 from dataclasses import dataclass
 from math import sin, cos, atan2, acos, asin, sqrt, pi, atan
-from turtle import rt
 from typing import List, TypeAlias
-import pint
 from pint._typing import QuantityOrUnitLike
 from src.consts import *
 

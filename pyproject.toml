@@ -5,7 +5,9 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [
+    "ipykernel>=6.29.5",
     "opencv-contrib-python>=4.11.0.86",
+    "pint>=0.24.4",
     "pygame>=2.6.1",
     "pymunk>=6.11.1",
     "smbus>=1.1.post2",
