@@ -184,6 +184,15 @@ wheels = [
 ]
 
 [[package]]
+name = "ipynb"
+version = "0.5.1"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/a9/73/fd7b6497883c180e870712216348cf0f3271b75347f75cffbf28cf633d7e/ipynb-0.5.1.tar.gz", hash = "sha256:8d834c777ca3885289938728cc382f081c86a58e92961e86f0aba60c96938ce5", size = 3938 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/31/42/4c0bbb66390e3a68e04ebf134c8d074a00c18b5882293f8ace5f7497fbf0/ipynb-0.5.1-py3-none-any.whl", hash = "sha256:9686aafce6fd58ec160fa6ba649a7810df89cc0f06a317188ac5e59fd728e325", size = 6885 },
+]
+
+[[package]]
 name = "ipython"
 version = "9.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -617,6 +626,7 @@ version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
     { name = "ipykernel" },
+    { name = "ipynb" },
     { name = "opencv-contrib-python" },
     { name = "pint" },
     { name = "pygame" },
@@ -629,6 +639,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "ipykernel", specifier = ">=6.29.5" },
+    { name = "ipynb", specifier = ">=0.5.1" },
     { name = "opencv-contrib-python", specifier = ">=4.11.0.86" },
     { name = "pint", specifier = ">=0.24.4" },
     { name = "pygame", specifier = ">=2.6.1" },
