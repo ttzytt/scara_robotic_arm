@@ -154,6 +154,8 @@ class TicMotorController:
         return self.tic.get_target_position()
 
     def is_moving(self):
+        if (self.get_current_position != self.get_target_position()):
+            print(f"current: {self.get_current_position()}, target: {self.get_target_position()}")
         return self.get_current_position() != self.get_target_position()
 
     def block_until_reach(self):

@@ -18,11 +18,13 @@ tic2.exit_safe_start()
 
 positions = [50, 30, 80, 0]
 for position in positions:
+    tic.set_target_position(position)
+    tic2.set_target_position(position)
     cur_pos = tic.get_current_position()
-    while cur_pos != position: 
+    cur_pos2 = tic2.get_current_position()
+    while cur_pos != position or cur_pos2 != position: 
         cur_pos = tic.get_current_position()
-        tic.set_target_position(position)
-        tic2.set_target_position(position)
+        cur_pos2 = tic2.get_current_position()
         print("cur_pos: ", cur_pos, " tar pos ", tic.get_target_position())
 
 
