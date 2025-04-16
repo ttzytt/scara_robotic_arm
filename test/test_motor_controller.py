@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.motor_controller import I2CticMotorController
 
-motor = I2CticMotorController(1, 14, False)
+motor = I2CticMotorController(1, 15, True)
 
 def main():
 

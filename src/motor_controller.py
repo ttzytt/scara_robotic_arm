@@ -66,9 +66,11 @@ class TicMotorController:
 
     def reset_pos(self, cur_deg: float):
         step = self.deg_to_step(cur_deg)
+        if self.is_reversed:
+            step = -step
         self.tic.halt_and_set_position(step)
-        self.tic.energize()
         self.tic.exit_safe_start()
+        self.tic.energize()
 
     def move_to_angle(
         self,

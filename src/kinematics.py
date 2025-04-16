@@ -112,6 +112,7 @@ class ParaScaraKinematics:
 
 
     def inverse_kinematics(self, x_pos: pqt, y_pos: pqt, mode: str | List[str] = "+-") -> List[ParaScaraState]:
+        mode = mode or ["+-"]
         x: float = x_pos.to(DEF_LEN_UNIT).magnitude
         y: float = y_pos.to(DEF_LEN_UNIT).magnitude
         l1: float = self.setup.lf_base_len.to(DEF_LEN_UNIT).magnitude
