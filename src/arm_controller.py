@@ -17,9 +17,13 @@ class ArmController:
 
     def reset_pos(self, x: pqt, y: pqt, mode: str = "+-"):
         state = self.kine_solver.inverse_kinematics(x, y, mode)[0]
-        print(f"q1: {state.lf_base_ang}, q2: {state.rt_base_ang}")
         self.lf_motor.reset_pos(state.lf_base_ang.to(ur.deg).m)
         self.rt_motor.reset_pos(state.rt_base_ang.to(ur.deg).m)
+
+    def reset_deg(self, left_deg: float, right_deg: float):
+        self.lf_motor.reset_pos(left_deg)
+        self.rt_motor.reset_pos(right_deg)
+
 
     def move_to_pos(
         self, x: pqt, y: pqt, deg_per_sec: Optional[float] = None, mode: str = "+-"
