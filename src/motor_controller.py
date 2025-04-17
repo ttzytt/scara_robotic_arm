@@ -112,9 +112,13 @@ class TicMotorController:
     ):
         self.move_to_angle(tar_deg, is_cw, max_deg_per_sec, max_acc_deg_per_sec2)
         self.block_until_reach()
+    
     def deg_to_step(self, deg: float, is_positive: bool = True) -> int:
         deg = self.wrap_deg(deg, is_positive)
         return round(deg / self.deg_per_micro_step)
+    
+    def get_current_deg(self) -> float:
+        return self.step_to_deg(self.get_current_position())
 
     def move_to_angle_blocking_in_close_dir(
         self, 

@@ -42,6 +42,12 @@ class ArmController:
     ):
         self.move_to_pos(x, y, deg_per_sec, mode)
         self.block_until_reach()
+    
+    # def get_current_pos(self) -> tup_qq: 
+    #     left_ang = self.lf_motor.get_current_deg()
+    #     right_ang = self.rt_motor.get_current_deg()
+    #     self.kine_solver.forward_kinematics(left_ang * ur.deg, right_ang * ur.deg)
+        
 
     def is_moving(self):
         return self.lf_motor.is_moving() or self.rt_motor.is_moving()

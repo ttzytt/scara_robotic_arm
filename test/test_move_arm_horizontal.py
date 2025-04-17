@@ -6,7 +6,7 @@ from src.motor_controller import I2CticMotorController, StepMode
 from src.arm_controller import ArmController
 from src.consts import *
 from src.kinematics import ParaScaraSetup
-
+import time
 lf_motor = I2CticMotorController(1, 14, True, step_mode=StepMode._8)
 rf_motor = I2CticMotorController(1, 15, True, step_mode=StepMode._8)
 setup = ParaScaraSetup(
@@ -19,7 +19,7 @@ setup = ParaScaraSetup(
 arm_controller = ArmController(setup, lf_motor, rf_motor)
 
 Y_MM = 100
-MIN_X_MM = -30
+MIN_X_MM = -80
 MAX_X_MM = 130
 
 def main():
@@ -41,9 +41,18 @@ def main():
 
 
     while True:
-        for cur_x in np.linspace(MIN_X_MM, MAX_X_MM, 100):
-            arm_controller.move_to_pos_blocking(cur_x * ur.mm, Y_MM * ur.mm)
+        for idx, cur_x in enumerate(np.linspace(MIN_X_MM, MAX_X_MM, 100)):
+            arm_controller.move_to_pos(cur_x * ur.mm, Y_MM * ur.mm)
+            if idx == 0: arm_controller.block_until_reach()
+            time.sleep(.005)
+        arm_controller.block_until_reach()
 
+        for idx, cur_x in enumerate(reversed(np.linspace(MIN_X_MM, MAX_X_MM, 100))):
+            arm_controller.move_to_pos(cur_x * ur.mm, Y_MM * ur.mm)
+            if idx == 0:
+                arm_controller.block_until_reach()
+            time.sleep(0.005)
+        arm_controller.block_until_reach()
 
 if __name__ == "__main__":
     try:
