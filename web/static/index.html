@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Raspberry Pi Robot Control</title>
+</head>
+
+<body>
+    <h1>Live Control + Camera Feed</h1>
+    <p>Use your keyboard to control the robot.</p>
+    <img src="/video_feed" alt="Camera stream not available" />
+
+    <script>
+        // Connect to WebSocket
+        const wsProtocol = (location.protocol === "https:") ? "wss:" : "ws:";
+        const ws = new WebSocket(wsProtocol + "//" + location.host + "/ws");
+
+        ws.onopen = () => {
+            console.log("WebSocket connected.");
+        };
+
+        ws.onmessage = (event) => {
+            console.log("Message from server:", event.data);
+        };
+
+        ws.onclose = () => {
+            console.log("WebSocket disconnected.");
+        };
+
+        // Send keypresses to server
+        document.addEventListener("keydown", (event) => {
+            const key = event.key; // 'ArrowUp', 'w', etc.
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(key);
+                console.log("Sent:", key);
+            }
+        });
+    </script>
+</body>
+
+</html>
