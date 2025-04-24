@@ -7,6 +7,12 @@ from fastapi import FastAPI, WebSocket, Request, Response
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketDisconnect
+import time
+from gpiozero import Motor
+from parse import parse
+
+
+test_motor = Motor(forward=15, backward=14, pwm=True)
 
 app = FastAPI()
 
@@ -31,10 +37,22 @@ async def websocket_endpoint(websocket: WebSocket):
     try:
         while True:
             # We wait for a message from the client (the keystrokes).
-            data = await websocket.receive_text()
+            data : str = await websocket.receive_text()
             # data now contains whatever key was pressed. For example, 'ArrowLeft', 'w', 'a', etc.
             # Do your control logic here, e.g. update motors or servo angles, etc.
             print("Received key:", data)
+
+            if data.startswith("stick"):
+                result = parse("stick:{side}:{x:f},{y:f}", data)
+                print("parse result: ", result)
+
+                if result['side'] == 'left': 
+                    if result['y'] > 0.1:
+                        test_motor.forward(abs(result['y']))
+                    elif result['y'] < -0.1:
+                        test_motor.backward(abs(result['y']))
+                    else: 
+                        test_motor.stop()
 
             # Optionally, you can also send back a message to client
             # await websocket.send_text(f"Got key: {data}")
@@ -44,37 +62,48 @@ async def websocket_endpoint(websocket: WebSocket):
         active_websockets.remove(websocket)
 
 
+
 def gen_frames():
     """
     Generator function to capture frames from the Pi camera (or any webcam)
     and yield them as JPEG bytes for a multipart streaming response (MJPEG).
+    Automatically attempts to reconnect if the camera fails.
     """
-    # Adjust the device index if needed
-    cap = cv2.VideoCapture(0)
-    # You might also set width, height, fps if needed:
-    # cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
-    # cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-    # cap.set(cv2.CAP_PROP_FPS, 30)
-
-    if not cap.isOpened():
-        raise RuntimeError("Could not open webcam.")
+    cap = None
 
     while True:
-        success, frame = cap.read()
-        if not success:
-            break
+        # Initialize/reinitialize camera if not already available
+        if cap is None or not cap.isOpened():
+            print("Attempting to connect to webcam...")
+            cap = cv2.VideoCapture(0)
+            cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
+            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
+            cap.set(cv2.CAP_PROP_FPS, 30)
 
-        # Encode frame as JPEG
+            if not cap.isOpened():
+                print("Webcam not found. Retrying in 2 seconds...")
+                cap.release()
+                cap = None
+                time.sleep(2)
+                continue
+
+        success, frame = cap.read()
+
+        if not success:
+            print("Frame capture failed. Reinitializing camera...")
+            cap.release()
+            cap = None
+            continue
+
         ret, buffer = cv2.imencode(".jpg", frame)
         if not ret:
+            print("JPEG encoding failed. Skipping frame.")
             continue
 
         jpg_bytes = buffer.tobytes()
 
-        # Yield frame in multipart/x-mixed-replace format
         yield (b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg_bytes + b"\r\n")
 
-    cap.release()
 
 
 @app.get("/video_feed")

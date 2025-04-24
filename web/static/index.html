@@ -3,39 +3,93 @@
 
 <head>
     <meta charset="utf-8">
-    <title>Raspberry Pi Robot Control</title>
+    <title>Robot Control – Keyboard & Gamepad</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            text-align: center;
+        }
+
+        img {
+            max-width: 100%;
+        }
+    </style>
 </head>
 
 <body>
-    <h1>Live Control + Camera Feed</h1>
-    <p>Use your keyboard to control the robot.</p>
+    <h1>Control Robot via Keyboard or Gamepad</h1>
+
+    <!-- MJPEG camera stream from the Pi -->
     <img src="/video_feed" alt="Camera stream not available" />
 
     <script>
-        // Connect to WebSocket
+        /* ---------- WebSocket ---------- */
         const wsProtocol = (location.protocol === "https:") ? "wss:" : "ws:";
         const ws = new WebSocket(wsProtocol + "//" + location.host + "/ws");
 
-        ws.onopen = () => {
-            console.log("WebSocket connected.");
-        };
+        ws.onopen = () => console.log("✓ WebSocket connected");
+        ws.onmessage = e => console.log("⇠ From Pi:", e.data);
+        ws.onclose = () => console.log("✕ WebSocket disconnected");
 
-        ws.onmessage = (event) => {
-            console.log("Message from server:", event.data);
-        };
-
-        ws.onclose = () => {
-            console.log("WebSocket disconnected.");
-        };
-
-        // Send keypresses to server
-        document.addEventListener("keydown", (event) => {
-            const key = event.key; // 'ArrowUp', 'w', etc.
+        /* ---------- Keyboard ---------- */
+        document.addEventListener("keydown", (e) => {
             if (ws.readyState === WebSocket.OPEN) {
-                ws.send(key);
-                console.log("Sent:", key);
+                ws.send("key:" + e.key);               // ex: key:ArrowUp
             }
         });
+
+        /* ---------- Gamepad ---------- */
+        let gamepadIdx = null;
+
+        window.addEventListener("gamepadconnected", e => {
+            gamepadIdx = e.gamepad.index;
+            console.log("✓ Gamepad connected:", e.gamepad.id);
+        });
+        window.addEventListener("gamepaddisconnected", () => {
+            console.log("✕ Gamepad disconnected");
+            gamepadIdx = null;
+        });
+
+        const DEADZONE = 0.20;        // ignore tiny stick noise
+        const BTN_REPEAT_MS = 100;    // how often to resend “button pressed”
+
+        /* Cache of last-sent states to avoid spamming identical messages */
+        const last = { lx: 0, ly: 0, rx: 0, ry: 0, btn: [] };
+        let lastBtnSent = 0;
+
+        function pollGamepad() {
+            const now = performance.now();
+
+            if (gamepadIdx !== null && ws.readyState === WebSocket.OPEN) {
+                const gp = navigator.getGamepads()[gamepadIdx];
+                if (gp) {
+                    /* ---- sticks ---- */
+                    const [lx, ly, rx, ry] = [gp.axes[0], gp.axes[1], gp.axes[2], gp.axes[3]];
+
+                    if (Math.hypot(lx - last.lx, ly - last.ly) > DEADZONE) {
+                        ws.send(`stick:left:${lx.toFixed(2)},${ly.toFixed(2)}`);
+                        Object.assign(last, { lx, ly });
+                    }
+                    if (Math.hypot(rx - last.rx, ry - last.ry) > DEADZONE) {
+                        ws.send(`stick:right:${rx.toFixed(2)},${ry.toFixed(2)}`);
+                        Object.assign(last, { rx, ry });
+                    }
+
+                    /* ---- buttons ---- */
+                    if (now - lastBtnSent > BTN_REPEAT_MS) {
+                        gp.buttons.forEach((b, i) => {
+                            if (b.pressed && !last.btn[i]) {
+                                ws.send("button:" + i);   // ex: button:0
+                            }
+                            last.btn[i] = b.pressed;
+                        });
+                        lastBtnSent = now;
+                    }
+                }
+            }
+            requestAnimationFrame(pollGamepad);
+        }
+        requestAnimationFrame(pollGamepad);
     </script>
 </body>
 
