@@ -2,7 +2,7 @@
 import cv2
 import json
 import time
-
+import os
 import uvicorn
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse, StreamingResponse
@@ -10,20 +10,35 @@ from fastapi.staticfiles import StaticFiles
 from starlette.websockets import WebSocketDisconnect
 
 from gpiozero import Motor
-from gamepad import GamepadParser
-
+from web.gamepad import GamepadParser
+from src.mecanum_chassis import MecanumChassis
+# Absolute path to the project root
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+# Point at web/static, not just static
+STATIC_DIR = os.path.join(BASE_DIR, "static")
+print("Serving static files from:", STATIC_DIR)
 # Motor and parser setup
-test_motor = Motor(forward=15, backward=14, pwm=True)
+lf_tp_motor = Motor(forward=15, backward=14, pwm=True)
+rt_tp_motor = Motor(forward=24, backward=23, pwm=True)
+rt_bt_motor = Motor(forward=25, backward=8, pwm=True)
+lf_bt_motor = Motor(forward=7, backward=1, pwm=True)
+chassis = MecanumChassis(
+    lf_tp_motor=lf_tp_motor, rt_tp_motor=rt_tp_motor,
+    lf_bt_motor=lf_bt_motor, rt_bt_motor=rt_bt_motor,
+    lf_tp_motor_coef=1.0, rt_tp_motor_coef=1.0,
+    lf_bt_motor_coef=1.0, rt_bt_motor_coef=1.0
+)
 parser     = GamepadParser()
 
 app = FastAPI()
 
 # Serve index.html and static assets
-app.mount("/static", StaticFiles(directory="static"), name="static")
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
 @app.get("/")
 async def root():
-    return HTMLResponse(open("static/index.html").read())
+
+    return HTMLResponse(open(STATIC_DIR + "/index.html").read())
 
 
 @app.websocket("/ws")
@@ -46,14 +61,16 @@ async def websocket_endpoint(websocket: WebSocket):
             print("GamepadMeta:", meta)
             print("GamepadState:", state)
 
-            # Example motor control using left stick Y
-            y = state.left_stick_y
-            if y >  0.1:
-                test_motor.forward(y)
-            elif y < -0.1:
-                test_motor.backward(abs(y))
-            else:
-                test_motor.stop()
+            lx_stick = state.left_stick_x
+            ly_stick = state.left_stick_y
+            rx_stick = state.right_stick_x
+            ry_stick = state.right_stick_y
+             
+            chassis.move(
+                x=-ly_stick,  # Forward/backward
+                y=lx_stick,  # Left/right
+                heading=rx_stick 
+            )
 
     except WebSocketDisconnect:
         print("WebSocket disconnected")

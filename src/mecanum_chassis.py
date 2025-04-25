@@ -24,19 +24,30 @@ class MecanumChassis:
         self.lf_bt_motor.forward(0)
         self.rt_bt_motor.forward(0)
     
-    def move(self, x : float, y : float, heading : float):
+    def move(self, x: float, y: float, heading: float):
         """
-        Move the chassis in the specified direction with the specified speed.
-        x: forward/backward speed
-        y: left/right speed
-        heading: rotation speed
+        x: forward/backward  (−1...1)
+        y: left/right        (−1...1)
+        heading: rotation    (−1...1)
         """
-        lf_tp_speed = x + y + heading
-        rt_tp_speed = x - y - heading
-        lf_bt_speed = x - y + heading
-        rt_bt_speed = x + y - heading
 
-        self.lf_tp_motor.value = lf_tp_speed * self.lf_tp_motor_coef
-        self.rt_tp_motor.value = rt_tp_speed * self.rt_tp_motor_coef
-        self.lf_bt_motor.value = lf_bt_speed * self.lf_bt_motor_coef
-        self.rt_bt_motor.value = rt_bt_speed * self.rt_bt_motor_coef
+        # 1) compute raw wheel speeds
+        lf =  x + y + heading   # left-front
+        rf =  x - y - heading   # right-front
+        lb =  x - y + heading   # left-back
+        rb =  x + y - heading   # right-back
+
+        # 2) find the largest magnitude
+        max_mag = max(abs(lf), abs(rf), abs(lb), abs(rb), 1.0)
+
+        # 3) normalize so max magnitude is 1.0
+        lf /= max_mag
+        rf /= max_mag
+        lb /= max_mag
+        rb /= max_mag
+
+        # 4) apply your per-motor coefficients and send to GPIOZero
+        self.lf_tp_motor.value = lf * self.lf_tp_motor_coef
+        self.rt_tp_motor.value = rf * self.rt_tp_motor_coef
+        self.lf_bt_motor.value = lb * self.lf_bt_motor_coef
+        self.rt_bt_motor.value = rb * self.rt_bt_motor_coef

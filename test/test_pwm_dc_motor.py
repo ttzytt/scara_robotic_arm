@@ -24,7 +24,7 @@
 from gpiozero import Motor
 from time import sleep
 
-motor = Motor(forward=14, backward=15, pwm=True)
+motor = Motor(forward=7, backward=1, pwm=True)
 
 motor.forward(0.5)  # Run forward at 50% speed
 sleep(2)
