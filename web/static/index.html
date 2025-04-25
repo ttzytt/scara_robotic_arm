@@ -18,8 +18,6 @@
 
 <body>
     <h1>Control Robot via Keyboard or Gamepad</h1>
-
-    <!-- MJPEG camera stream from the Pi -->
     <img src="/video_feed" alt="Camera stream not available" />
 
     <script>
@@ -31,16 +29,9 @@
         ws.onmessage = e => console.log("⇠ From Pi:", e.data);
         ws.onclose = () => console.log("✕ WebSocket disconnected");
 
-        /* ---------- Keyboard ---------- */
-        document.addEventListener("keydown", (e) => {
-            if (ws.readyState === WebSocket.OPEN) {
-                ws.send("key:" + e.key);               // ex: key:ArrowUp
-            }
-        });
 
         /* ---------- Gamepad ---------- */
         let gamepadIdx = null;
-
         window.addEventListener("gamepadconnected", e => {
             gamepadIdx = e.gamepad.index;
             console.log("✓ Gamepad connected:", e.gamepad.id);
@@ -50,45 +41,31 @@
             gamepadIdx = null;
         });
 
-        const DEADZONE = 0.20;        // ignore tiny stick noise
-        const BTN_REPEAT_MS = 100;    // how often to resend “button pressed”
-
-        /* Cache of last-sent states to avoid spamming identical messages */
-        const last = { lx: 0, ly: 0, rx: 0, ry: 0, btn: [] };
-        let lastBtnSent = 0;
-
         function pollGamepad() {
-            const now = performance.now();
-
             if (gamepadIdx !== null && ws.readyState === WebSocket.OPEN) {
                 const gp = navigator.getGamepads()[gamepadIdx];
                 if (gp) {
-                    /* ---- sticks ---- */
-                    const [lx, ly, rx, ry] = [gp.axes[0], gp.axes[1], gp.axes[2], gp.axes[3]];
-
-                    if (Math.hypot(lx - last.lx, ly - last.ly) > DEADZONE) {
-                        ws.send(`stick:left:${lx.toFixed(2)},${ly.toFixed(2)}`);
-                        Object.assign(last, { lx, ly });
-                    }
-                    if (Math.hypot(rx - last.rx, ry - last.ry) > DEADZONE) {
-                        ws.send(`stick:right:${rx.toFixed(2)},${ry.toFixed(2)}`);
-                        Object.assign(last, { rx, ry });
-                    }
-
-                    /* ---- buttons ---- */
-                    if (now - lastBtnSent > BTN_REPEAT_MS) {
-                        gp.buttons.forEach((b, i) => {
-                            if (b.pressed && !last.btn[i]) {
-                                ws.send("button:" + i);   // ex: button:0
-                            }
-                            last.btn[i] = b.pressed;
-                        });
-                        lastBtnSent = now;
-                    }
+                    // build the JSON payload
+                    const payload = {
+                        id: gp.id,
+                        index: gp.index,
+                        timestamp: gp.timestamp,
+                        connected: gp.connected,
+                        mapping: gp.mapping,
+                        axes: Array.from(gp.axes),
+                        buttons: gp.buttons.map((b, i) => ({
+                            index: i,
+                            pressed: b.pressed,
+                            value: b.value,
+                            touched: b.touched
+                        }))
+                    };
+                    ws.send(JSON.stringify(payload));
                 }
             }
             requestAnimationFrame(pollGamepad);
         }
+
         requestAnimationFrame(pollGamepad);
     </script>
 </body>
