@@ -3,7 +3,7 @@ from math import sin, cos, atan2, acos, asin, sqrt, pi, atan
 from typing import List, TypeAlias
 from pint._typing import QuantityOrUnitLike
 from src.consts import *
-
+from src.utils import *
 
 @dataclass
 class ParaScaraSetup:
@@ -112,10 +112,7 @@ class ParaScaraKinematics:
         for xi, yi, _ in raw:
             v1x, v1y = -x1, -y1
             v2x, v2y = xi - x1, yi - y1
-            dot   = v1x*v2x + v1y*v2y
-            norm1 = sqrt(v1x*v1x + v1y*v1y)
-            norm2 = sqrt(v2x*v2x + v2y*v2y)
-            phi   = acos(max(-1.0, min(1.0, dot/(norm1*norm2))))
+            phi = get_unsigned_ang_between(v1x, v1y, v2x, v2y)
             phis.append(phi)
 
         # 6) sort indices by phi: smaller→inward, larger→outward

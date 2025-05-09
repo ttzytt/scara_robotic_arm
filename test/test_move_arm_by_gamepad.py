@@ -24,10 +24,10 @@ ur = pint.UnitRegistry()
 
 # --- CONFIGURABLE PARAMS ---
 # maximum Cartesian speed (mm/s) when stick is pushed all the way
-MAX_SPEED_MM_S = 50.0
+MAX_SPEED_MM_S = 150.0
 
 # starting position
-START_X_MM = 100.0
+START_X_MM = 0
 START_Y_MM = 100.0
 
 # pygame joystick axis indices (left stick)
@@ -60,9 +60,7 @@ def wait_for_reset(arm: ArmController):
     ).lower() != "y":
         pass
     arm.reset_deg(90, 90)
-    START_X_MM = arm.get_current_state()[0].end_effector_pos[0].to(ur.mm).m
-    START_Y_MM = arm.get_current_state()[0].end_effector_pos[1].to(ur.mm).m
-
+    print(f"Starting position: ({START_X_MM:.1f}, {START_Y_MM:.1f}) mm")
     while input("Enter `y` to start joystick‐control loop: ").lower() != "y":
         pass
 
@@ -101,7 +99,11 @@ def main():
             # note: many controllers report up as negative, so we invert Y
             raw_x = js.get_axis(AXIS_X)  # −1 .. +1
             raw_y = -js.get_axis(AXIS_Y)  # invert so up is +
-
+            if abs(raw_x) < 0.1:
+                raw_x = 0.0
+            if abs(raw_y) < 0.1:
+                raw_y = 0.0
+            print(f"raw_x: {raw_x:.2f}, raw_y: {raw_y:.2f}")
             # c) compute dt
             now = time.time()
             dt = now - last_time
@@ -116,10 +118,20 @@ def main():
             # target_y = np.clip(target_y, MIN_Y_MM, MAX_Y_MM)
 
             # f) send new target to arm
-            arm.move_to_pos(target_x * ur.mm, target_y * ur.mm)
-
+            try:
+                arm.move_to_pos(target_x * ur.mm, target_y * ur.mm)
+            except ValueError as e:
+                target_x -= raw_x * MAX_SPEED_MM_S * dt
+                target_y -= raw_y * MAX_SPEED_MM_S * dt
+                continue
             # g) read back & print current end‐effector pos
-            state = arm.get_current_state()[0]
+
+            try:
+                state = arm.get_current_state(mode='oi')[0]
+            except IndexError:
+                target_x -= raw_x * MAX_SPEED_MM_S * dt
+                target_y -= raw_y * MAX_SPEED_MM_S * dt
+                continue
             cur_x = state.end_effector_pos[0].to(ur.mm).m
             cur_y = state.end_effector_pos[1].to(ur.mm).m
             print(f"→ Target: ({target_x:.1f}, {target_y:.1f}) mm  |  "
