@@ -45,71 +45,91 @@ class ParaScaraKinematics:
     def __init__(self, setup: ParaScaraSetup):
         self.setup = setup
 
-    def forward_kinematics(self, lf_base_ang: pqt, rt_base_ang: pqt) -> List[ParaScaraState]:
-        l1: float = self.setup.lf_base_len.to(DEF_LEN_UNIT).magnitude
-        l2: float = self.setup.lf_link_len.to(DEF_LEN_UNIT).magnitude
-        l1p: float = self.setup.rt_base_len.to(DEF_LEN_UNIT).magnitude
-        l2p: float = self.setup.rt_link_len.to(DEF_LEN_UNIT).magnitude
-        d: float = self.setup.axis_dist.to(DEF_LEN_UNIT).magnitude
-        q1: float = lf_base_ang.to(ur.rad).magnitude
-        q2: float = rt_base_ang.to(ur.rad).magnitude
+    def forward_kinematics(
+        self,
+        lf_base_ang: pqt,
+        rt_base_ang: pqt,
+        mode: str = "o"   # allowed values: "i", "o", "io", "oi"
+    ) -> List[ParaScaraState]:
+        """
+        Compute the end‐effector states for given base angles.
+        mode:
+          "i"  → inward only  (smaller opening angle)
+          "o"  → outward only (larger opening angle)
+          "io" → inward then outward
+          "oi" → outward then inward
+        """
+        if mode not in ("i", "o", "io", "oi"):
+            raise ValueError("mode must be one of 'i','o','io','oi'")
 
-        A = 2 * l2p * l1p * sin(q2) - 2 * l1 * l2p * sin(q1)
-        B = 2 * l2p * d - 2 * l1 * l2p * cos(q1) + 2 * l2p * l1p * cos(q2)
+        # 1) unpack lengths & angles (in DEF_LEN_UNIT / radians)
+        l1   = self.setup.lf_base_len .to(DEF_LEN_UNIT).magnitude
+        l2   = self.setup.lf_link_len .to(DEF_LEN_UNIT).magnitude
+        l1p  = self.setup.rt_base_len .to(DEF_LEN_UNIT).magnitude
+        l2p  = self.setup.rt_link_len .to(DEF_LEN_UNIT).magnitude
+        d    = self.setup.axis_dist   .to(DEF_LEN_UNIT).magnitude
+        q1   = lf_base_ang.to(ur.rad).magnitude
+        q2   = rt_base_ang.to(ur.rad).magnitude
 
-        # Example fix (assuming they should be plus):
-        C = (
-            l1**2 - l2**2 + l1p**2 + l2p**2 + d**2
-            - 2*l1*l1p*sin(q1)*sin(q2)  
-            - 2*l1*d*cos(q1) + 2*l1p*d*cos(q2)
-            - 2*l1*l1p*cos(q1)*cos(q2) 
-        )
+        # 2) compute elbow pivots
+        x1 = l1 * cos(q1)
+        y1 = l1 * sin(q1)
+        x2 = d  + l1p * cos(q2)
+        y2 =     l1p * sin(q2)
 
+        # 3) circle–circle intersection
+        dx = x2 - x1
+        dy = y2 - y1
+        R  = sqrt(dx*dx + dy*dy)
+        if R > (l2 + l2p) or R < abs(l2 - l2p):
+            return []  # no real solution
 
-        inside_sqrt = A**2 + B**2 - C**2
-        solutions: List[ParaScaraState] = []  # type: ignore
+        a  = (l2*l2 - l2p*l2p + R*R) / (2 * R)
+        h2 = max(0.0, l2*l2 - a*a)
+        h  = sqrt(h2)
+        xm = x1 + a * dx / R
+        ym = y1 + a * dy / R
 
-        if inside_sqrt < 0:
-            return solutions
-
-        root_val = sqrt(inside_sqrt)
+        # 4) build both raw solutions
+        raw = []
         for sign in (+1, -1):
-            # sign is for the two possible solutions of theta 2
-            rt_link_ang = 2 * atan2(A + sign * root_val, B - C)
-            # rt_link_ang is the solution for theta 2
-            num_asin = (
-                l2p * sin(rt_link_ang)
-                + l1p * sin(q2)
-                - l1 * sin(q1)
-            )   
-            ratio = num_asin / l2
+            xi = xm + sign * h * ( dy / R)
+            yi = ym - sign * h * ( dx / R)
 
-            if not (-1.0 <= ratio <= 1.0): return solutions
+            state = ParaScaraState(
+                end_effector_pos=(xi * DEF_LEN_UNIT, yi * DEF_LEN_UNIT),
+                lf_base_endpos   =(x1 * DEF_LEN_UNIT, y1 * DEF_LEN_UNIT),
+                rt_base_endpos   =(x2 * DEF_LEN_UNIT, y2 * DEF_LEN_UNIT),
+                lf_base_ang      =lf_base_ang.to(DEF_ANG_UNIT),                  # type: ignore
+                rt_base_ang      =rt_base_ang.to(DEF_ANG_UNIT),                  # type: ignore
+                lf_link_ang      =(atan2(yi - y1, xi - x1) * ur.rad).to(DEF_ANG_UNIT),  # type: ignore
+                rt_link_ang      =(atan2(yi - y2, xi - x2) * ur.rad).to(DEF_ANG_UNIT),  # type: ignore
+            )
+            raw.append((xi, yi, state))
 
-            for lf_link_ang_candidate in [asin(ratio), pi - asin(ratio)]:   
-                # condiate is different solutions for theta 1
-                x = l1 * cos(q1) + l2 * cos(lf_link_ang_candidate)
-                y = l1 * sin(q1) + l2 * sin(lf_link_ang_candidate)  
-                x_sol2 = d + l1p * cos(q2) + l2p * cos(rt_link_ang)
-                y_sol2 = l1p * sin(q2) + l2p * sin(rt_link_ang)
+        # 5) compute opening‐angle for each solution
+        phis = []
+        for xi, yi, _ in raw:
+            v1x, v1y = -x1, -y1
+            v2x, v2y = xi - x1, yi - y1
+            dot   = v1x*v2x + v1y*v2y
+            norm1 = sqrt(v1x*v1x + v1y*v1y)
+            norm2 = sqrt(v2x*v2x + v2y*v2y)
+            phi   = acos(max(-1.0, min(1.0, dot/(norm1*norm2))))
+            phis.append(phi)
 
-                if abs(x - x_sol2) > 1e-10 or abs(y - y_sol2) > 1e-10: continue
+        # 6) sort indices by phi: smaller→inward, larger→outward
+        indices = sorted(range(2), key=lambda i: phis[i])
+        tag_state = {
+            "i": raw[indices[0]][2],
+            "o": raw[indices[1]][2],
+        }
 
-                solutions.append(
-                    ParaScaraState(
-                        end_effector_pos=(x * DEF_LEN_UNIT, y * DEF_LEN_UNIT),
-                        lf_base_endpos=(cos(lf_base_ang) * l1 * DEF_LEN_UNIT, sin(lf_base_ang) * l1 * DEF_LEN_UNIT),
-                        rt_base_endpos=((cos(rt_base_ang) * l1p + d)* DEF_LEN_UNIT, sin(rt_base_ang) * l1p * DEF_LEN_UNIT),
-
-                        lf_base_ang=lf_base_ang.to(DEF_ANG_UNIT), # type: ignore
-                        rt_base_ang=rt_base_ang.to(DEF_ANG_UNIT), # type: ignore
-                        lf_link_ang=(lf_link_ang_candidate * ur.rad).to(DEF_ANG_UNIT), # type: ignore
-                        rt_link_ang=(rt_link_ang * ur.rad).to(DEF_ANG_UNIT), # type: ignore
-                    )
-                )
-
-        return solutions
-
+        # 7) assemble results in requested mode order
+        result: List[ParaScaraState] = []
+        for ch in mode:
+            result.append(tag_state[ch])
+        return result
 
     def inverse_kinematics(self, x_pos: pqt, y_pos: pqt, mode: str | List[str] = "+-") -> List[ParaScaraState]:
         mode = mode or ["+-"]

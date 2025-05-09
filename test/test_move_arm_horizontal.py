@@ -7,8 +7,8 @@ from src.arm_controller import ArmController
 from src.consts import *
 from src.kinematics import ParaScaraSetup
 import time
-lf_motor = I2CticMotorController(1, 14, True, step_mode=StepMode._8)
-rf_motor = I2CticMotorController(1, 15, True, step_mode=StepMode._8)
+lf_motor = I2CticMotorController(1, 15, True, step_mode=StepMode._8)
+rf_motor = I2CticMotorController(1, 14, True, step_mode=StepMode._8)
 setup = ParaScaraSetup(
     lf_base_len=85 * ur.mm,
     rt_base_len=85 * ur.mm,

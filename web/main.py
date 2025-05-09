@@ -12,6 +12,11 @@ from starlette.websockets import WebSocketDisconnect
 from gpiozero import Motor
 from web.gamepad import GamepadParser
 from src.mecanum_chassis import MecanumChassis
+from src.motor_controller import I2CticMotorController, StepMode
+from src.arm_controller import ArmController
+from src.consts import *
+from src.kinematics import ParaScaraSetup
+
 # Absolute path to the project root
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # Point at web/static, not just static
@@ -22,6 +27,19 @@ lf_tp_motor = Motor(forward=15, backward=14, pwm=True)
 rt_tp_motor = Motor(forward=24, backward=23, pwm=True)
 rt_bt_motor = Motor(forward=25, backward=8, pwm=True)
 lf_bt_motor = Motor(forward=7, backward=1, pwm=True)
+
+lf_arm_motor = I2CticMotorController(1, 15, True, step_mode=StepMode._8)
+rf_arm_motor = I2CticMotorController(1, 14, True, step_mode=StepMode._8)
+
+setup = ParaScaraSetup(
+    lf_base_len=85 * ur.mm,
+    rt_base_len=85 * ur.mm,
+    lf_link_len=85 * ur.mm,
+    rt_link_len=85 * ur.mm,
+    axis_dist=55 * ur.mm,
+)
+arm_controller = ArmController(setup, lf_arm_motor, rf_arm_motor)
+
 chassis = MecanumChassis(
     lf_tp_motor=lf_tp_motor, rt_tp_motor=rt_tp_motor,
     lf_bt_motor=lf_bt_motor, rt_bt_motor=rt_bt_motor,
@@ -66,12 +84,21 @@ async def websocket_endpoint(websocket: WebSocket):
             rx_stick = state.right_stick_x
             ry_stick = state.right_stick_y
              
-            chassis.move(
-                x=-ly_stick,  # Forward/backward
-                y=lx_stick,  # Left/right
-                heading=rx_stick 
-            )
-
+            if not state.btn_rb.pressed:
+                chassis.move(
+                    x=-ly_stick,  # Forward/backward
+                    y=lx_stick,  # Left/right
+                    heading=rx_stick 
+                )
+            # else: 
+                # arm_state = arm_controller.get_current_state()[0]
+                # cur_x, cur_y = arm_state.x.to(ur.mm).m, arm_state.y.to(ur.mm).m
+                # COEF = 2
+                # dx = COEF * rx_stick
+                # dy = COEF * -ry_stick
+                # arm_controller.move_to_pos(
+                #     cur_x + dx * ur.mm, cur_y + dy * ur.mm
+                # )
     except WebSocketDisconnect:
         print("WebSocket disconnected")
 
@@ -93,6 +120,10 @@ def gen_frames():
                 continue
 
         success, frame = cap.read()
+
+        # flip it vertically 
+
+        frame = cv2.flip(frame, 0)
         if not success:
             print("Frame capture failed—reinit camera…")
             cap.release()
