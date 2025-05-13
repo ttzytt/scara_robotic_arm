@@ -30,10 +30,10 @@ class ParaScaraState:
             (self.end_effector_pos[0].to(dis_unit), self.end_effector_pos[1].to(dis_unit)), # type: ignore
             (self.lf_base_endpos[0].to(dis_unit), self.lf_base_endpos[1].to(dis_unit)),     # type: ignore
             (self.rt_base_endpos[0].to(dis_unit), self.rt_base_endpos[1].to(dis_unit)),     # type: ignore
-            (self.touching_pt_pos[0].to(dis_unit), self.touching_pt_pos[1].to(dis_unit)),   # type: ignore
-            self.rt_link_ang.to(ang_unit), # type: ignore
+
             self.lf_base_ang.to(ang_unit), # type: ignore
             self.rt_base_ang.to(ang_unit), # type: ignore
+            self.rt_link_ang.to(ang_unit), # type: ignore
             self.lf_link_ang.to(ang_unit), # type: ignore
         )
 

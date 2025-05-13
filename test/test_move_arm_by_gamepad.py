@@ -4,6 +4,7 @@ import time
 
 import pygame
 import numpy as np
+from pprint import pprint
 
 # add your project root to PATH
 sys.path.insert(
@@ -16,11 +17,8 @@ sys.path.insert(
 from src.motor_controller import I2CticMotorController, StepMode
 from src.arm_controller import ArmController
 from src.kinematics import ParaScaraSetup
-import src.consts as C
+from src.consts import * 
 import pint
-
-# unit registry
-ur = pint.UnitRegistry()
 
 # --- CONFIGURABLE PARAMS ---
 # maximum Cartesian speed (mm/s) when stick is pushed all the way
@@ -44,6 +42,8 @@ def init_arm() -> ArmController:
     rf_motor = I2CticMotorController(
         1, 14, True, step_mode=StepMode._8
     )
+    lf_motor.tic.set_current_limit(9) # 1092ma
+    rf_motor.tic.set_current_limit(9)
     setup = ParaScaraSetup(
         lf_base_len=85 * ur.mm,
         rt_base_len=85 * ur.mm,
@@ -72,6 +72,9 @@ def main():
         # 2) reset to home
         wait_for_reset(arm)
 
+        print("init state")
+        pprint(arm.get_current_state(mode='o')[0].to_unit(ur.mm, ur.deg))
+        prev_state = arm.get_current_state(mode='o')[0]
         # 3) init pygame joystick
         pygame.init()
         pygame.joystick.init()
@@ -99,9 +102,9 @@ def main():
             # note: many controllers report up as negative, so we invert Y
             raw_x = js.get_axis(AXIS_X)  # −1 .. +1
             raw_y = -js.get_axis(AXIS_Y)  # invert so up is +
-            if abs(raw_x) < 0.1:
+            if abs(raw_x) < 0.05:
                 raw_x = 0.0
-            if abs(raw_y) < 0.1:
+            if abs(raw_y) < 0.05:
                 raw_y = 0.0
             print(f"raw_x: {raw_x:.2f}, raw_y: {raw_y:.2f}")
             # c) compute dt
@@ -110,8 +113,10 @@ def main():
             last_time = now
 
             # d) integrate to get new target (in mm)
-            target_x += raw_x * MAX_SPEED_MM_S * dt
-            target_y += raw_y * MAX_SPEED_MM_S * dt
+            dx = raw_x * MAX_SPEED_MM_S * dt
+            dy = raw_y * MAX_SPEED_MM_S * dt
+            target_x += dx
+            target_y += dy
 
             # e) clamp within your workspace if desired
             # target_x = np.clip(target_x, MIN_X_MM, MAX_X_MM)
@@ -119,18 +124,39 @@ def main():
 
             # f) send new target to arm
             try:
+                if arm.check_link_stuck_if_moved_to(target_x * ur.mm, target_y * ur.mm):
+                    print("⚠️ Arm is stuck. Please move to other positions")
+                    target_x -= dx
+                    target_y -= dy
+                    continue
+            except (IndexError, ValueError) as e:
+                target_x -= dx
+                target_y -= dy
+                print(e)
+                print("previous state")
+                pprint(prev_state.to_unit(ur.mm, ur.deg))
+                continue
+            
+            try:
                 arm.move_to_pos(target_x * ur.mm, target_y * ur.mm)
             except ValueError as e:
-                target_x -= raw_x * MAX_SPEED_MM_S * dt
-                target_y -= raw_y * MAX_SPEED_MM_S * dt
+                target_x -= dx
+                target_y -= dy
+                print(e)
+                print("previous state")
+                pprint(prev_state.to_unit(ur.mm, ur.deg))
                 continue
             # g) read back & print current end‐effector pos
+            
 
             try:
                 state = arm.get_current_state(mode='oi')[0]
-            except IndexError:
-                target_x -= raw_x * MAX_SPEED_MM_S * dt
-                target_y -= raw_y * MAX_SPEED_MM_S * dt
+            except IndexError as e:
+                target_x -= dx
+                target_y -= dy
+                print(e)
+                print("previous state")
+                pprint(prev_state.to_unit(ur.mm, ur.deg))
                 continue
             cur_x = state.end_effector_pos[0].to(ur.mm).m
             cur_y = state.end_effector_pos[1].to(ur.mm).m
