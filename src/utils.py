@@ -1,5 +1,6 @@
 from src.consts import tup_ff
 from math import sqrt, pi, atan2, acos
+from time import time
 
 def dist2d(a : tup_ff, b : tup_ff) -> float:
     return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
@@ -29,3 +30,6 @@ def get_unsigned_ang_between(v1x : float, v1y : float, v2x : float, v2y : float)
     norm1 = sqrt(v1x * v1x + v1y * v1y)
     norm2 = sqrt(v2x * v2x + v2y * v2y)
     return acos(clamp(dot / (norm1 * norm2), -1.0, 1.0))
+
+def get_time_millis() -> int:
+    return round(time() * 1000)

@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from typing import Any, Self, Sequence
 from typing_extensions import override
 from web.events import BrowserEvent
-
+from src.utils import get_time_millis
 # 1) Dataclasses
 
 @dataclass
@@ -71,17 +71,16 @@ DefaultMapping: dict[str, dict[str, int]] = {
 # 3) The parser
 class GamepadParser:
     def __init__(self, mapping: dict[str, dict[str, int]] = DefaultMapping):
-        self.ax_map  = mapping.get("axes", {})
-        self.btn_map = mapping.get("buttons", {})
+        self.ax_map  : dict[str, int] = mapping.get("axes", {})
+        self.btn_map : dict[str, int] = mapping.get("buttons", {})
 
-    def _parse_btn(self, raw: Any) -> float | GamepadBtn:
-        if isinstance(raw, dict):
-            return GamepadBtn(
-                pressed=raw["pressed"],
-                value=raw["value"],
-                touched=raw["touched"]
-            )
-        return float(raw)
+    def _parse_btn(self, raw: Any) -> GamepadBtn:
+        assert isinstance(raw, dict), f"Expected dict, got {type(raw)}"
+        return GamepadBtn(
+            pressed=raw["pressed"],
+            value=raw["value"],
+            touched=raw["touched"]
+        )
 
     def _parse_trigger(
         self,
@@ -106,8 +105,8 @@ class GamepadParser:
             connected = raw["connected"],
             mapping   = raw["mapping"],
         )
-        axes    = raw["axes"]
-        buttons = raw["buttons"]
+        axes    : list[float]= raw["axes"]
+        buttons : list[dict[str, Any]] = raw["buttons"] # from json sent from JS
 
         state = GamepadState(
             left_stick_x  = axes[self.ax_map["left_stick_x"]],
@@ -133,6 +132,7 @@ class GamepadParser:
 
         return meta, state
 
+@dataclass
 class GamepadEvent(BrowserEvent):
     state: GamepadState
     meta:  GamepadMeta
@@ -142,6 +142,7 @@ class GamepadEvent(BrowserEvent):
     def deserialize(
         cls,
         json_str: str,
+        received_t : int = get_time_millis(),
         mapping: dict[str, dict[str, int]] = DefaultMapping,
     ) -> Self:
         raw = json.loads(json_str)
@@ -151,5 +152,6 @@ class GamepadEvent(BrowserEvent):
             name  = "gamepad_upate",
             meta  = meta,
             state = state,
+            received_t = received_t,
         )
 
