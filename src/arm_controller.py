@@ -43,7 +43,7 @@ class ArmController:
         self.move_to_pos(x, y, deg_per_sec, mode)
         self.block_until_reach()
     
-    def get_current_state(self, mode:str='o') -> List[ParaScaraState]: 
+    def get_current_state(self, mode:str='o') -> list[ParaScaraState]: 
         left_ang = self.lf_motor.get_current_deg()
         right_ang = self.rt_motor.get_current_deg()
         return self.kine_solver.forward_kinematics(left_ang * ur.deg, right_ang * ur.deg, mode)
