@@ -3,7 +3,6 @@ import os
 import time
 
 import pygame
-import numpy as np
 from pprint import pprint
 
 # add your project root to PATH
@@ -18,7 +17,6 @@ from src.motor_controller import I2CticMotorController, StepMode
 from src.arm_controller import ArmController
 from src.kinematics import ParaScaraSetup
 from src.consts import * 
-import pint
 
 # --- CONFIGURABLE PARAMS ---
 # maximum Cartesian speed (mm/s) when stick is pushed all the way
@@ -42,8 +40,8 @@ def init_arm() -> ArmController:
     rf_motor = I2CticMotorController(
         1, 14, True, step_mode=StepMode._8
     )
-    lf_motor.tic.set_current_limit(9) # 1092ma
-    rf_motor.tic.set_current_limit(9)
+    lf_motor.tic.set_current_limit(8) 
+    rf_motor.tic.set_current_limit(8)
     setup = ParaScaraSetup(
         lf_base_len=85 * ur.mm,
         rt_base_len=85 * ur.mm,

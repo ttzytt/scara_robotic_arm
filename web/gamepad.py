@@ -1,6 +1,8 @@
 import json
 from dataclasses import dataclass
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Self, Sequence
+from typing_extensions import override
+from web.events import BrowserEvent
 
 # 1) Dataclasses
 
@@ -16,8 +18,8 @@ class GamepadState:
     left_stick_y: float
     right_stick_x: float
     right_stick_y: float
-    left_trigger: Union[float, GamepadBtn]
-    right_trigger: Union[float, GamepadBtn]
+    left_trigger: float | GamepadBtn
+    right_trigger: float | GamepadBtn
     btn_a: GamepadBtn
     btn_b: GamepadBtn
     btn_x: GamepadBtn
@@ -33,15 +35,14 @@ class GamepadState:
 
 @dataclass
 class GamepadMeta:
-    id: str
+    _id: str
     index: int
     timestamp: float
     connected: bool
     mapping: str
 
-
 # 2) Default mapping for the “standard” layout
-DefaultMapping: Dict[str, Dict[str, int]] = {
+DefaultMapping: dict[str, dict[str, int]] = {
     "axes": {
         "left_stick_x": 0,
         "left_stick_y": 1,
@@ -67,14 +68,13 @@ DefaultMapping: Dict[str, Dict[str, int]] = {
     }
 }
 
-
 # 3) The parser
 class GamepadParser:
-    def __init__(self, mapping: Dict[str, Dict[str, int]] = DefaultMapping):
+    def __init__(self, mapping: dict[str, dict[str, int]] = DefaultMapping):
         self.ax_map  = mapping.get("axes", {})
         self.btn_map = mapping.get("buttons", {})
 
-    def _parse_btn(self, raw: Any) -> Union[float, GamepadBtn]:
+    def _parse_btn(self, raw: Any) -> float | GamepadBtn:
         if isinstance(raw, dict):
             return GamepadBtn(
                 pressed=raw["pressed"],
@@ -83,11 +83,12 @@ class GamepadParser:
             )
         return float(raw)
 
-    def _parse_trigger(self,
-                       axes: list[float],
-                       buttons: list[dict],
-                       name: str
-                       ) -> Union[float, GamepadBtn]:
+    def _parse_trigger(
+        self,
+        axes: Sequence[float],
+        buttons: Sequence[dict[str, Any]],
+        name: str
+    ) -> float | GamepadBtn:
         # 1) Try axes first
         if name in self.ax_map:
             return float(axes[self.ax_map[name]])
@@ -97,9 +98,9 @@ class GamepadParser:
         # 3) Fallback
         return 0.0
 
-    def parse_full(self, raw: Dict[str, Any]) -> Tuple[GamepadMeta, GamepadState]:
+    def parse_full(self, raw: dict[str, Any]) -> tuple[GamepadMeta, GamepadState]:
         meta = GamepadMeta(
-            id        = raw["id"],
+            _id        = raw["id"],
             index     = raw["index"],
             timestamp = raw["timestamp"],
             connected = raw["connected"],
@@ -131,3 +132,24 @@ class GamepadParser:
         )
 
         return meta, state
+
+class GamepadEvent(BrowserEvent):
+    state: GamepadState
+    meta:  GamepadMeta
+
+    @classmethod
+    @override
+    def deserialize(
+        cls,
+        json_str: str,
+        mapping: dict[str, dict[str, int]] = DefaultMapping,
+    ) -> Self:
+        raw = json.loads(json_str)
+        parser = GamepadParser(mapping)
+        meta, state = parser.parse_full(raw)
+        return cls(
+            name  = "gamepad_upate",
+            meta  = meta,
+            state = state,
+        )
+

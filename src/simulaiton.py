@@ -1,11 +1,9 @@
 from dataclasses import dataclass
-from numpy import diff
 from kinematics import ParaScaraSetup
 import pymunk as pmk
-from typing import Tuple, TypeAlias
 from src.consts import *
 from src.utils import *
-from math import atan2, sqrt
+from math import atan2
 
 @dataclass 
 class ParaScaraPhySpecs:
@@ -17,7 +15,7 @@ class ParaScaraPhySpecs:
 
 
 class ParaScaraSim:
-    def __init__(self, setup: ParaScaraSetup, phy: ParaScaraPhySpecs, lf_motor_pos : Tuple[float, float] = (0, 0)):
+    def __init__(self, setup: ParaScaraSetup, phy: ParaScaraPhySpecs, lf_motor_pos : tuple[float, float] = (0, 0)):
 
         r"""
             initial setup: 
@@ -64,7 +62,7 @@ class ParaScaraSim:
         )
 
     @staticmethod 
-    def gen_vert_arm(wid : float, len_ : float, lower_end_pos: tup_ff , mass : float) -> Tuple[pmk.Body, pmk.Shape]:
+    def gen_vert_arm(wid : float, len_ : float, lower_end_pos: tup_ff , mass : float) -> tuple[pmk.Body, pmk.Shape]:
         moment = pmk.moment_for_box(mass, (wid, wid))
         body = pmk.Body(mass, moment, body_type=pmk.Body.DYNAMIC)
         shape = pmk.Poly.create_box(body, (wid, len_))
@@ -72,7 +70,7 @@ class ParaScaraSim:
         return body, shape
     
     @staticmethod
-    def gen_arm_connecting(a : tup_ff, b : tup_ff, mass : float, wid : float) -> Tuple[pmk.Body, pmk.Shape]:
+    def gen_arm_connecting(a : tup_ff, b : tup_ff, mass : float, wid : float) -> tuple[pmk.Body, pmk.Shape]:
         moment = pmk.moment_for_box(mass, (wid, wid))
         body = pmk.Body(mass, moment, body_type=pmk.Body.DYNAMIC)
         len_ = dist2d(a, b)

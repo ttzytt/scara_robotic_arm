@@ -1,5 +1,4 @@
 from gpiozero import Servo
-from time import sleep
 # Initialize servo on GPIO17
 servo = Servo(17)
 servo.mid()  # Set to center initially

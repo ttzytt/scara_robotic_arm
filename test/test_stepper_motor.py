@@ -1,7 +1,5 @@
 from smbus2 import SMBus
-from ticlib import ticlib
 from ticlib import TicI2C, SMBus2Backend
-from time import sleep
 
 bus = SMBus(1)  # Represents /dev/i2c-3
 address = 14  # Address of the Tic, that is its device number

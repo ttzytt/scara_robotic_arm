@@ -1,6 +1,6 @@
 from dataclasses import dataclass
-from math import sin, cos, atan2, acos, asin, sqrt, pi, atan
-from typing import List, TypeAlias
+from math import sin, cos, atan2, acos, sqrt, pi
+from typing import Sequence
 from pint._typing import QuantityOrUnitLike
 from src.consts import *
 from src.utils import *
@@ -50,7 +50,7 @@ class ParaScaraKinematics:
         lf_base_ang: pqt,
         rt_base_ang: pqt,
         mode: str = "o"   # allowed values: "i", "o", "io", "oi"
-    ) -> List[ParaScaraState]:
+    ) -> list[ParaScaraState]:
         """
         Compute the end‐effector states for given base angles.
         mode:
@@ -123,12 +123,12 @@ class ParaScaraKinematics:
         }
 
         # 7) assemble results in requested mode order
-        result: List[ParaScaraState] = []
+        result: list[ParaScaraState] = []
         for ch in mode:
             result.append(tag_state[ch])
         return result
 
-    def inverse_kinematics(self, x_pos: pqt, y_pos: pqt, mode: str | List[str] = "+-") -> List[ParaScaraState]:
+    def inverse_kinematics(self, x_pos: pqt, y_pos: pqt, mode: str | Sequence[str] = "+-") -> list[ParaScaraState]:
         mode = mode or ["+-"]
         x: float = x_pos.to(DEF_LEN_UNIT).magnitude
         y: float = y_pos.to(DEF_LEN_UNIT).magnitude
@@ -162,7 +162,7 @@ class ParaScaraKinematics:
         else:
             modes = mode
 
-        results: List[ParaScaraState] = []
+        results: list[ParaScaraState] = []
         for m in modes:
             if m not in ("++", "+-", "-+", "--"):
                 raise ValueError(
