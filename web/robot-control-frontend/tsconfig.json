@@ -1,0 +1,27 @@
+{
+  "compilerOptions": {
+    /* Basic Options */
+    "target": "esnext", // modern browsers
+    "module": "esnext", // native ESM
+    "moduleResolution": "node", // resolve imports like a bundler
+    "strict": true, // all strict mode checks
+    "noEmit": true, // don’t write out any files
+    "esModuleInterop": true, // allow default imports from CJS
+    "resolveJsonModule": true, // allow `import data from "./data.json"`
+    "jsx": "preserve", // if you ever add JSX
+    /* Specify library files to be included in the compilation. */
+    "lib": [
+      "DOM",
+      "ESNext"
+    ]
+  },
+  /* only type-check files in src/ (and any .d.ts you add) */
+  "include": [
+    "src/**/*"
+  ],
+  /* ignore these folders entirely */
+  "exclude": [
+    "node_modules",
+    "dist"
+  ]
+}
