@@ -50,15 +50,6 @@ parser     = GamepadParser()
 
 app = FastAPI()
 
-# Serve index.html and static assets
-app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
-
-@app.get("/")
-async def root():
-
-    return HTMLResponse(open(STATIC_DIR + "/index.html").read())
-
-
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
@@ -154,6 +145,8 @@ def video_feed():
         gen_frames(),
         media_type="multipart/x-mixed-replace; boundary=frame"
     )
+
+app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="frontend")
 
 
 if __name__ == "__main__":
