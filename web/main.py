@@ -106,17 +106,21 @@ async def websocket_endpoint(websocket: WebSocket):
 def gen_frames():
     cap = None
     while True:
+        check_cam_idxs = [0, 1, 2, 3]
+        next_to_check_idx = 0 
         if cap is None or not cap.isOpened():
             print("Attempting to connect to webcam…")
-            cap = cv2.VideoCapture(0)
+            cap = cv2.VideoCapture(check_cam_idxs[next_to_check_idx])
+            next_to_check_idx += 1
+            next_to_check_idx %= len(check_cam_idxs)
             cap.set(cv2.CAP_PROP_FRAME_WIDTH,  640)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
             cap.set(cv2.CAP_PROP_FPS,          30)
             if not cap.isOpened():
-                print("No camera—retrying in 2s…")
+                print("No camera—retrying in .5s…")
                 cap.release()
                 cap = None
-                time.sleep(2)
+                time.sleep(.5)
                 continue
 
         success, frame = cap.read()
