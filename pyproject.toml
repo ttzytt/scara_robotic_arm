@@ -20,6 +20,6 @@ dependencies = [
     "ruff>=0.11.10",
     "smbus>=1.1.post2",
     "smbus2>=0.5.0",
-    "ticlib>=0.2.2",
+    "ticlib>=0.3",
     "uvicorn[standard]>=0.34.1",
 ]

@@ -873,7 +873,7 @@ requires-dist = [
     { name = "ruff", specifier = ">=0.11.10" },
     { name = "smbus", specifier = ">=1.1.post2" },
     { name = "smbus2", specifier = ">=0.5.0" },
-    { name = "ticlib", specifier = ">=0.2.2" },
+    { name = "ticlib", specifier = ">=0.3" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.34.1" },
 ]
 
@@ -947,11 +947,11 @@ wheels = [
 
 [[package]]
 name = "ticlib"
-version = "0.2.2"
+version = "0.3.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/cd/41/c77969faae19f61b58b0a41c3d6c2a9013c8f3bc2899f4ea3f023855cea0/ticlib-0.2.2.tar.gz", hash = "sha256:3ebdbee27629992d46d0fb0feb18dc51e790363b35b174c87de00ce5f6ed7419", size = 14586 }
+sdist = { url = "https://files.pythonhosted.org/packages/51/ef/753439af1f5d3eaeedd1f2c40583f05a356a06cfd68383f898d483b5305c/ticlib-0.3.0.tar.gz", hash = "sha256:52a7d65a53eeb279f55797d97242122f2383a9e3e70c3a8bba7b2762812a0f02", size = 23678 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e6/8a/cd9e21ea884c80cf9e78206d68240b597814e7df1eaf0f97dfe2bc2eb2d3/ticlib-0.2.2-py3-none-any.whl", hash = "sha256:7f9092c698c31df36130d367eeb294342304bdbaabee17baf872682bdf1420aa", size = 12104 },
+    { url = "https://files.pythonhosted.org/packages/6e/85/21e60345e522a4377ec0c3e59af6682f885fcec6941ebb98b91d02a29f49/ticlib-0.3.0-py3-none-any.whl", hash = "sha256:d9ccb877a417265f833212c691c7e3bc4bb9ad01d7d227c310357005b3e4ad43", size = 21340 },
 ]
 
 [[package]]
