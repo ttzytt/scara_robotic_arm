@@ -4,20 +4,20 @@ import "./style.css";
 const wsProtocol = location.protocol === "https:" ? "wss:" : "ws:";
 const ws = new WebSocket(`${wsProtocol}//${location.host}/ws`);
 
-ws.onopen = () => console.log("✓ WebSocket connected");
-ws.onmessage = e => console.log("⇠ From Pi:", e.data);
-ws.onclose = () => console.log("✕ WebSocket disconnected");
+ws.onopen = () => console.log("WebSocket connected");
+ws.onmessage = e => console.log("From Pi:", e.data);
+ws.onclose = () => console.log("WebSocket disconnected");
 
 // ---------- Gamepad ----------
 let gamepadIdx: number | null = null;
 
 window.addEventListener("gamepadconnected", (e) => {
   gamepadIdx = e.gamepad.index;
-  console.log("✓ Gamepad connected:", e.gamepad.id);
+  console.log("Gamepad connected:", e.gamepad.id);
 });
 
 window.addEventListener("gamepaddisconnected", () => {
-  console.log("❌ Gamepad disconnected");
+  console.log("Gamepad disconnected");
   gamepadIdx = null;
 });
 

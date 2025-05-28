@@ -1,6 +1,7 @@
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
 from typing import Self, ClassVar
+from dataclasses_json import dataclass_json, DataClassJsonMixin
 
 @dataclass 
 class EventMeta(ABC): 
@@ -14,22 +15,32 @@ class EventMeta(ABC):
             self.eid = EventMeta.next_eid
             EventMeta.next_eid += 1
 
+@dataclass_json
 @dataclass
-class BrowserEvent(EventMeta):
+class BrowserEvent(EventMeta, DataClassJsonMixin, ABC):
     received_t : int
     generated_t : int = field(init=False, default=-1)
 
     @classmethod
-    @abstractmethod
     def deserialize(cls, json_str: str) -> Self:
-        pass
+        return cls.from_json(json_str)
 
     @property
     def latency(self) -> int: 
         return self.received_t - self.generated_t
 
 @dataclass
-class LocalEvent(EventMeta):
+class LocalEvent(EventMeta, DataClassJsonMixin, ABC):
     @abstractmethod
     def serialize(self) -> str: 
-        pass
+        return self.to_json()
+    
+@dataclass
+class AlertRequestEvent(LocalEvent): 
+    msg: str
+    name: str = "alert_request"
+
+@dataclass
+class AlertResponseEvent(BrowserEvent):
+    respond_to_eid: int
+    name: str = "alert_response"

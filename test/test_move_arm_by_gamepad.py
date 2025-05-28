@@ -40,8 +40,8 @@ def init_arm() -> ArmController:
     rf_motor = I2CticMotorController(
         1, 14, True, step_mode=StepMode._8
     )
-    lf_motor.tic.set_current_limit(8) 
-    rf_motor.tic.set_current_limit(8)
+    lf_motor.tic.set_current_limit(9) 
+    rf_motor.tic.set_current_limit(9)
     setup = ParaScaraSetup(
         lf_base_len=85 * ur.mm,
         rt_base_len=85 * ur.mm,
@@ -123,7 +123,7 @@ def main():
             # f) send new target to arm
             try:
                 if arm.check_link_stuck_if_moved_to(target_x * ur.mm, target_y * ur.mm):
-                    print("⚠️ Arm is stuck. Please move to other positions")
+                    print(f"⚠️ Arm is stuck. With angle between link={arm.get_link_ang_diff().to(ur.deg)} Please move to other positions")
                     target_x -= dx
                     target_y -= dy
                     continue
