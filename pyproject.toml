@@ -8,6 +8,7 @@ dependencies = [
     "dataclasses-json>=0.6.7",
     "fastapi>=0.115.12",
     "gpiozero>=2.0.1",
+    "icecream>=2.1.4",
     "ipykernel>=6.29.5",
     "ipynb>=0.5.1",
     "opencv-contrib-python>=4.11.0.86",

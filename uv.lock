@@ -257,6 +257,21 @@ wheels = [
 ]
 
 [[package]]
+name = "icecream"
+version = "2.1.4"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "asttokens" },
+    { name = "colorama" },
+    { name = "executing" },
+    { name = "pygments" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/78/5e/9f41831f032b9ce456c919c4989952562fcc2b0eb8c038080c24ce20d6cd/icecream-2.1.4.tar.gz", hash = "sha256:58755e58397d5350a76f25976dee7b607f5febb3c6e1cddfe6b1951896e91573", size = 15872 }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/57/1d/43ef7a6875190e6745ffcd1b12c7aaa7efed082897401e311ee1cd75c8b2/icecream-2.1.4-py3-none-any.whl", hash = "sha256:7bb715f69102cae871b3a361c3b656536db02cfcadac9664c673581cac4df4fd", size = 14782 },
+]
+
+[[package]]
 name = "idna"
 version = "3.10"
 source = { registry = "https://pypi.org/simple" }
@@ -874,6 +889,7 @@ dependencies = [
     { name = "dataclasses-json" },
     { name = "fastapi" },
     { name = "gpiozero" },
+    { name = "icecream" },
     { name = "ipykernel" },
     { name = "ipynb" },
     { name = "opencv-contrib-python" },
@@ -896,6 +912,7 @@ requires-dist = [
     { name = "dataclasses-json", specifier = ">=0.6.7" },
     { name = "fastapi", specifier = ">=0.115.12" },
     { name = "gpiozero", specifier = ">=2.0.1" },
+    { name = "icecream", specifier = ">=2.1.4" },
     { name = "ipykernel", specifier = ">=6.29.5" },
     { name = "ipynb", specifier = ">=0.5.1" },
     { name = "opencv-contrib-python", specifier = ">=4.11.0.86" },

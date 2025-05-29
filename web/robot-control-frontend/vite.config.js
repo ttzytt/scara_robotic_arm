@@ -24,6 +24,7 @@ export default defineConfig({
             // if you want all your assets in a subfolder (e.g. static/assets)
             // uncomment and adjust:
             // output: { assetFileNames: "assets/[name]-[hash][extname]" }
-        }
+        }, 
+        minify: false
     }
 });

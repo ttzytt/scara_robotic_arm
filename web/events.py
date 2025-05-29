@@ -1,25 +1,16 @@
 from dataclasses import dataclass, field
 from abc import ABC, abstractmethod
-from typing import Self, ClassVar
+from typing import Self, ClassVar, Type, Literal
 from dataclasses_json import dataclass_json, DataClassJsonMixin, config, Exclude
 from src.utils import get_time_millis
 
-
-@dataclass
+@dataclass(kw_only=True)
 class EventMeta(ABC):
     name: str
     generated_t: int
     eid: int = field(init=False, default=-1)
-    next_eid: ClassVar[int] = 0
 
-    def __post_init__(self):
-        if self.eid == -1:
-            self.eid = EventMeta.next_eid
-            EventMeta.next_eid += 1
-
-
-@dataclass_json
-@dataclass
+@dataclass(kw_only=True)
 class BrowserEvent(EventMeta, DataClassJsonMixin, ABC):
     received_t: int
     generated_t: int = field(init=False, default=-1)
@@ -33,44 +24,71 @@ class BrowserEvent(EventMeta, DataClassJsonMixin, ABC):
         return self.received_t - self.generated_t
 
 
-@dataclass
-class LocalEvent(EventMeta, DataClassJsonMixin, ABC):
-    @abstractmethod
+@dataclass(kw_only=True)
+class ServerEvent(EventMeta, DataClassJsonMixin, ABC):
+    next_eid: ClassVar[int] = 0
+    generated_t: int = field(default_factory=get_time_millis)
+
     def serialize(self) -> str:
         return self.to_json()
 
     def __post_init__(self):
-        super().__post_init__()
-        self.generated_t = get_time_millis()
+        if self.eid == -1:
+            self.eid = ServerEvent.next_eid
+            ServerEvent.next_eid += 1
 
 
-@dataclass
-class AlertRequestEvent(LocalEvent):
-    msg: str
-    name: str = "alert_request"
-    alert_req_eids: ClassVar[set[int]] = field(
+@dataclass(kw_only=True)
+class RequestEvent(ServerEvent, DataClassJsonMixin, ABC):
+    req_eids: ClassVar[set[int]] = field(
         default=set(),
         metadata=config(
             exclude=Exclude.ALWAYS,
         ),
     )
 
+    def __init_subclass__(cls, **kwargs):
+        super().__init_subclass__(**kwargs)
+        cls.req_eids = set()
+
     def __post_init__(self):
         super().__post_init__()
-        if self.eid in AlertRequestEvent.alert_req_eids:
-            raise ValueError(f"Duplicate eid: {self.eid} in alert requests")
-        AlertRequestEvent.alert_req_eids.add(self.eid)
+        if self.eid in self.__class__.req_eids:
+            raise ValueError(f"Duplicate eid: {self.eid} in {self.__class__.__name__}")
+        self.__class__.req_eids.add(self.eid)
 
 
-@dataclass
-class AlertResponseEvent(BrowserEvent):
+@dataclass(kw_only=True)
+class ResponseEvent(BrowserEvent, DataClassJsonMixin, ABC):
+    request_cls: ClassVar[Type[RequestEvent]] = field(
+        metadata=config(
+            exclude=Exclude.ALWAYS,
+        ),
+    )
     respond_to_eid: int
-    name: str = "alert_response"
 
     def __post_init__(self):
-        super().__post_init__()
-        if self.respond_to_eid not in AlertRequestEvent.alert_req_eids:
+        if self.respond_to_eid not in self.request_cls.req_eids:
             raise ValueError(
-                f"Invalid respond_to_eid: {self.respond_to_eid}. Must be in {AlertRequestEvent.alert_req_eids}"
+                f"{self.__class__.__name__} invalid respond_to_eid: "
+                f"{self.respond_to_eid} not in {self.request_cls.__name__}.req_eids"
             )
-        AlertRequestEvent.alert_req_eids.remove(self.respond_to_eid)
+        self.request_cls.req_eids.remove(self.respond_to_eid)
+
+
+ConfirmType = Literal['ok', 'cancel', 'both']
+
+
+@dataclass(kw_only=True)
+class ConfirmRequestEvent(RequestEvent):
+    msg: str
+    require_confirm : ConfirmType = 'ok'
+    name: str = "confirm_request"
+
+
+@dataclass(kw_only=True)
+class ConfirmResponseEvent(ResponseEvent):
+    respond_to_eid: int
+    response: ConfirmType
+    name: str = "confirm_response"
+    request_cls = ConfirmRequestEvent

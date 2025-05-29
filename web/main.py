@@ -1,7 +1,5 @@
 # main.py
-import cv2
 import json
-import time
 import os
 import uvicorn
 from fastapi import FastAPI, WebSocket
@@ -11,6 +9,9 @@ from starlette.websockets import WebSocketDisconnect
 
 from gpiozero import Motor
 from web.gamepad import GamepadParser
+from web.video import gen_frames
+from web.response_manager import ResponseManager
+from web.events import ConfirmRequestEvent, ConfirmResponseEvent
 from src.mecanum_chassis import MecanumChassis
 from src.motor_controller import I2CticMotorController, StepMode
 from src.arm_controller import ArmController
@@ -46,97 +47,59 @@ chassis = MecanumChassis(
     lf_tp_motor_coef=1.0, rt_tp_motor_coef=1.0,
     lf_bt_motor_coef=1.0, rt_bt_motor_coef=1.0
 )
-parser     = GamepadParser()
+parser = GamepadParser()
 
 app = FastAPI()
+
+
+from fastapi import WebSocket, WebSocketDisconnect
+import asyncio, json
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(websocket: WebSocket):
     await websocket.accept()
+    manager = ResponseManager(websocket)
+    recv = manager.receive_loop()
+    queue: asyncio.Queue[str] = asyncio.Queue()
+
+    async def pump():
+        async for raw_msg in recv:
+            queue.put_nowait(raw_msg)
+
+    pump_task = asyncio.create_task(pump())
+
+    req1 = ConfirmRequestEvent(
+        msg="Please move both motors to perpendicular position.", require_confirm="ok"
+    )
+    await manager.send_request(req1, ConfirmResponseEvent)
+    resp1 = await manager.wait_for_response(req1)
+    assert isinstance(resp1, ConfirmResponseEvent), "Expected ConfirmResponseEvent"
+    print(f"Initialization step 1 confirmed: {resp1.response}")
+
+    req2 = ConfirmRequestEvent(
+        msg="Ready to start joystick control?", require_confirm="ok"
+    )
+    await manager.send_request(req2, ConfirmResponseEvent)
+    resp2 = await manager.wait_for_response(req2)
+    assert isinstance(resp2, ConfirmResponseEvent), "Expected ConfirmResponseEvent"
+    print(f"Initialization step 2 confirmed: {resp2.response}")
+
     try:
         while True:
-            data: str = await websocket.receive_text()
-            print("Received raw:", data)
+            raw_msg = await queue.get() 
+            data = json.loads(raw_msg)
+            meta, state = parser.parse_full(data)
 
-            # Expecting full-gamepad JSON
-            try:
-                raw = json.loads(data)
-            except json.JSONDecodeError:
-                print("⚠️  Invalid JSON, ignoring")
-                continue
-
-            # Parse into typed meta + state
-            meta, state = parser.parse_full(raw)
-            print("GamepadMeta:", meta)
-            print("GamepadState:", state)
-
-            lx_stick = state.left_stick_x
-            ly_stick = state.left_stick_y
-            rx_stick = state.right_stick_x
-            ry_stick = state.right_stick_y
-             
             if not state.btn_rb.pressed:
                 chassis.move(
-                    x=-ly_stick,  # Forward/backward
-                    y=lx_stick,  # Left/right
-                    heading=rx_stick 
+                    x=-state.left_stick_y,  # forward/backward
+                    y=state.left_stick_x,  # left/right
+                    heading=state.right_stick_x,
                 )
-            # else: 
-                # arm_state = arm_controller.get_current_state()[0]
-                # cur_x, cur_y = arm_state.x.to(ur.mm).m, arm_state.y.to(ur.mm).m
-                # COEF = 2
-                # dx = COEF * rx_stick
-                # dy = COEF * -ry_stick
-                # arm_controller.move_to_pos(
-                #     cur_x + dx * ur.mm, cur_y + dy * ur.mm
-                # )
     except WebSocketDisconnect:
+        pump_task.cancel()
         print("WebSocket disconnected")
-
-
-def gen_frames():
-    cap = None
-    while True:
-        check_cam_idxs = [0, 1, 2, 3]
-        next_to_check_idx = 0 
-        if cap is None or not cap.isOpened():
-            print("Attempting to connect to webcam…")
-            cap = cv2.VideoCapture(check_cam_idxs[next_to_check_idx])
-            next_to_check_idx += 1
-            next_to_check_idx %= len(check_cam_idxs)
-            cap.set(cv2.CAP_PROP_FRAME_WIDTH,  640)
-            cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
-            cap.set(cv2.CAP_PROP_FPS,          30)
-            if not cap.isOpened():
-                print("No camera—retrying in .5s…")
-                cap.release()
-                cap = None
-                time.sleep(.5)
-                continue
-
-        success, frame = cap.read()
-
-        # flip it vertically 
-
-        frame = cv2.flip(frame, 0)
-        if not success:
-            print("Frame capture failed—reinit camera…")
-            cap.release()
-            cap = None
-            continue
-
-        ret, buffer = cv2.imencode(".jpg", frame)
-        if not ret:
-            print("JPEG encoding failed, skipping frame…")
-            continue
-
-        jpg_bytes = buffer.tobytes()
-        yield (
-            b"--frame\r\n"
-            b"Content-Type: image/jpeg\r\n\r\n"
-            + jpg_bytes
-            + b"\r\n"
-        )
 
 
 @app.get("/video_feed")
@@ -147,7 +110,6 @@ def video_feed():
     )
 
 app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="frontend")
-
 
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8000)
