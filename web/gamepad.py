@@ -1,7 +1,6 @@
 import json
 from dataclasses import dataclass
-from typing import Any, Self, Sequence
-from typing_extensions import override
+from typing import Any, Self, Sequence, override
 from web.events import BrowserEvent
 from src.utils import get_time_millis
 # 1) Dataclasses

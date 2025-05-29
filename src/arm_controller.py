@@ -1,7 +1,9 @@
 from src.motor_controller import TicMotorController
-from src.kinematics import *
+from src.kinematics import ParaScaraKinematics, ParaScaraSetup, ParaScaraState
 from typing import Optional
-from src.utils import *
+from src.utils import get_unsigned_ang_between
+from src.consts import pqt, ur, DEF_LEN_UNIT
+from math import pi
 
 class ArmController:
     def __init__(
