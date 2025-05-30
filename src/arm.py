@@ -36,7 +36,7 @@ class LinkAngleChecker(ArmWorkspaceChecker):
         vr_y = (eff_y - r_y).to(DEF_LEN_UNIT).m
 
         ang = get_unsigned_ang_between(vl_x, vl_y, vr_x, vr_y) * ur.rad
-        return ang % (2 * ur.pi)
+        return ang % (2 * ur.pi) #type: ignore
 
     @override
     def is_state_valid(self, state: ParaScaraState) -> bool:
@@ -86,11 +86,14 @@ class Arm:
         setup: ParaScaraSetup,
         lf_motor: TicMotorController,
         rt_motor: TicMotorController,
-        workspace_checker: Optional[ArmWorkspaceChecker] = NoChecker(),
+        workspace_checker: Optional[ArmWorkspaceChecker] = None
     ):
+            
         self.kine_solver = ParaScaraKinematics(setup)
         self.lf_motor = lf_motor
         self.rt_motor = rt_motor
+        if workspace_checker is None:
+            workspace_checker = NoChecker(setup) 
         self.workspace_checker = workspace_checker
 
     def reset_pos(self, x: pqt, y: pqt, mode: str = "+-"):

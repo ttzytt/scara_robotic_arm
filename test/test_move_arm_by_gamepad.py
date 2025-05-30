@@ -49,7 +49,7 @@ def init_arm() -> Arm:
         rt_link_len=85 * ur.mm,
         axis_dist=55 * ur.mm,
     )
-    return Arm(setup, lf_motor, rf_motor, LinkAngleChecker())
+    return Arm(setup, lf_motor, rf_motor, LinkAngleChecker(setup))
 
 def wait_for_reset(arm: Arm):
     # same prompts as your reference
@@ -122,8 +122,7 @@ def main():
 
             # f) send new target to arm
             try:
-                if arm.is_pos_valid(target_x * ur.mm, target_y * ur.mm):
-                    print(f"⚠️ Arm is stuck. With angle between link={arm.get_link_ang_diff().to(ur.deg)} Please move to other positions")
+                if not arm.is_pos_valid(target_x * ur.mm, target_y * ur.mm):
                     target_x -= dx
                     target_y -= dy
                     continue
