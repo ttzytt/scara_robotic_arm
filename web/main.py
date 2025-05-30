@@ -2,10 +2,11 @@
 import json
 import os
 import uvicorn
+import asyncio
+
 from fastapi import FastAPI, WebSocket
 from fastapi.responses import HTMLResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
-from starlette.websockets import WebSocketDisconnect
 
 from gpiozero import Motor
 from web.gamepad import GamepadParser
@@ -17,6 +18,7 @@ from src.motor_controller import I2CticMotorController, StepMode
 from src.arm import ArmController
 from src.consts import ur
 from src.kinematics import ParaScaraSetup
+from fastapi import WebSocket, WebSocketDisconnect
 
 # Absolute path to the project root
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -52,8 +54,7 @@ parser = GamepadParser()
 app = FastAPI()
 
 
-from fastapi import WebSocket, WebSocketDisconnect
-import asyncio, json
+
 
 
 @app.websocket("/ws")
