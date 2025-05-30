@@ -40,6 +40,12 @@ class ServerEvent(EventMeta, DataClassJsonMixin, ABC):
 
 @dataclass(kw_only=True)
 class RequestEvent(ServerEvent, DataClassJsonMixin, ABC):
+    response_cls: ClassVar[Type['ResponseEvent']] = field(
+        metadata=config(
+            exclude=Exclude.ALWAYS,
+        ),
+    )
+    
     req_eids: ClassVar[set[int]] = field(
         default=set(),
         metadata=config(
@@ -92,3 +98,5 @@ class ConfirmResponseEvent(ResponseEvent):
     response: ConfirmType
     name: str = "confirm_response"
     request_cls = ConfirmRequestEvent
+
+ConfirmRequestEvent.response_cls = ConfirmResponseEvent

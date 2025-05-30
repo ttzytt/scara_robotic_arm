@@ -1,116 +1,82 @@
-# main.py
-import json
+# web/main.py
 import os
-import uvicorn
+import json
 import asyncio
 
-from fastapi import FastAPI, WebSocket
-from fastapi.responses import HTMLResponse, StreamingResponse
+import uvicorn
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from gpiozero import Motor
-from web.gamepad import GamepadParser
-from web.video import gen_frames
+from web.gamepad import GamepadParser, GamepadState
 from web.response_manager import ResponseManager
 from web.events import ConfirmRequestEvent, ConfirmResponseEvent
-from src.mecanum_chassis import MecanumChassis
-from src.motor_controller import I2CticMotorController, StepMode
-from src.arm import Arm
-from src.consts import ur
-from src.kinematics import ParaScaraSetup
-from fastapi import WebSocket, WebSocketDisconnect
+from web.teleop import CombinedTeleop, ChassisTeleop, ArmTeleop, PusherTeleop
+from web.video import gen_frames
 
-# Absolute path to the project root
+from src.robot import DEFAULT_ROBOT  
+from src.consts import ur
+
+robot = DEFAULT_ROBOT  
+app = FastAPI()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-# Point at web/static, not just static
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 print("Serving static files from:", STATIC_DIR)
-# Motor and parser setup
-lf_tp_motor = Motor(forward=15, backward=14, pwm=True)
-rt_tp_motor = Motor(forward=24, backward=23, pwm=True)
-rt_bt_motor = Motor(forward=25, backward=8, pwm=True)
-lf_bt_motor = Motor(forward=7, backward=1, pwm=True)
 
-lf_arm_motor = I2CticMotorController(1, 15, True, step_mode=StepMode._8)
-rf_arm_motor = I2CticMotorController(1, 14, True, step_mode=StepMode._8)
-
-setup = ParaScaraSetup(
-    lf_base_len=85 * ur.mm,
-    rt_base_len=85 * ur.mm,
-    lf_link_len=85 * ur.mm,
-    rt_link_len=85 * ur.mm,
-    axis_dist=55 * ur.mm,
+teleop = CombinedTeleop(
+    robot,
+    ChassisTeleop(robot, coef=1.0),
+    ArmTeleop(robot, start_pos=(0 * ur.mm, 100 * ur.mm), max_speed=20 * ur.mm),
+    PusherTeleop(robot),
 )
-arm_controller = Arm(setup, lf_arm_motor, rf_arm_motor)
 
-chassis = MecanumChassis(
-    lf_tp_motor=lf_tp_motor, rt_tp_motor=rt_tp_motor,
-    lf_bt_motor=lf_bt_motor, rt_bt_motor=rt_bt_motor,
-    lf_tp_motor_coef=1.0, rt_tp_motor_coef=1.0,
-    lf_bt_motor_coef=1.0, rt_bt_motor_coef=1.0
-)
 parser = GamepadParser()
-
-app = FastAPI()
-
-
-
 
 
 @app.websocket("/ws")
-async def websocket_endpoint(websocket: WebSocket):
-    await websocket.accept()
-    manager = ResponseManager(websocket)
-    recv = manager.receive_loop()
+async def websocket_endpoint(ws: WebSocket):
+    await ws.accept()
+    rmngr = ResponseManager(ws)
+    recv = rmngr.receive_loop()
     queue: asyncio.Queue[str] = asyncio.Queue()
 
     async def pump():
-        async for raw_msg in recv:
-            queue.put_nowait(raw_msg)
+        async for msg in recv:
+            queue.put_nowait(msg)
 
-    pump_task = asyncio.create_task(pump())
+    task = asyncio.create_task(pump())
 
     req1 = ConfirmRequestEvent(
         msg="Please move both motors to perpendicular position.", require_confirm="ok"
     )
-    await manager.send_request(req1, ConfirmResponseEvent)
-    resp1 = await manager.wait_for_response(req1)
-    assert isinstance(resp1, ConfirmResponseEvent), "Expected ConfirmResponseEvent"
-    print(f"Initialization step 1 confirmed: {resp1.response}")
+    await rmngr.send_and_wait(req1)
+    teleop.robot.arm.reset_deg(90, 90)
+    print("deg reset to (90, 90)")
 
     req2 = ConfirmRequestEvent(
         msg="Ready to start joystick control?", require_confirm="ok"
     )
-    await manager.send_request(req2, ConfirmResponseEvent)
-    resp2 = await manager.wait_for_response(req2)
-    assert isinstance(resp2, ConfirmResponseEvent), "Expected ConfirmResponseEvent"
-    print(f"Initialization step 2 confirmed: {resp2.response}")
+    await rmngr.send_and_wait(req2)  
 
     try:
-        while True:
-            raw_msg = await queue.get() 
-            data = json.loads(raw_msg)
-            meta, state = parser.parse_full(data)
+        with robot as r:
+            while True:
+                raw = await queue.get()
+                _, state = parser.parse_full(json.loads(raw))
+                teleop.update(state)
 
-            if not state.btn_rb.pressed:
-                chassis.move(
-                    x=-state.left_stick_y,  # forward/backward
-                    y=state.left_stick_x,  # left/right
-                    heading=state.right_stick_x,
-                )
     except WebSocketDisconnect:
-        pump_task.cancel()
+        task.cancel()
         print("WebSocket disconnected")
 
 
 @app.get("/video_feed")
 def video_feed():
     return StreamingResponse(
-        gen_frames(),
-        media_type="multipart/x-mixed-replace; boundary=frame"
+        gen_frames(), media_type="multipart/x-mixed-replace; boundary=frame"
     )
 
 app.mount("/", StaticFiles(directory=str(STATIC_DIR), html=True), name="frontend")
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run("web.main:app", host="raspberrypi.local", port=8000, reload=True)

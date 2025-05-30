@@ -66,7 +66,7 @@ def _get_default_robot() -> Robot:
         rt_bt_motor_coef=1.0,
     )
 
-    pusher = Pusher(pin=17, servo_rg=(-1, 1), _reversed=True)
+    pusher = Pusher(pin=17, servo_rg=(-1, 1), _reversed=False)
 
     return Robot(chassis=chassis, arm=arm, pusher=pusher)
 

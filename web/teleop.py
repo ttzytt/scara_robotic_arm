@@ -40,6 +40,7 @@ class ArmTeleop(TeleopController):
 
     @override
     def update(self, gamepad_state: GamepadState) -> None:
+        print("btn_rb pressed:", gamepad_state.btn_rb.pressed)
         if not gamepad_state.btn_rb.pressed:
             return
         gamepad_state = gamepad_state.filter_deadzone(0.05)
@@ -85,8 +86,8 @@ class ChassisTeleop(TeleopController):
     @override
     def update(self, gamepad_state: GamepadState) -> None:
 
-        vx = gamepad_state.left_stick_x * self.coef
-        vy = -gamepad_state.left_stick_y * self.coef
+        vx = -gamepad_state.left_stick_y * self.coef
+        vy = gamepad_state.left_stick_x * self.coef
         h = gamepad_state.right_stick_x * self.coef
 
         if gamepad_state.btn_rb.pressed:
