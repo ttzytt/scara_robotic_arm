@@ -1,6 +1,6 @@
 from src.motor_controller import TicMotorController
 from src.kinematics import ParaScaraKinematics, ParaScaraSetup, ParaScaraState
-from typing import Optional
+from typing import Optional, Self
 from src.utils import get_unsigned_ang_between
 from src.consts import pqt, ur, DEF_LEN_UNIT
 from math import pi
@@ -73,7 +73,7 @@ class CombinedChecker(ArmWorkspaceChecker):
         return all(checker.is_pos_valid(x, y, mode) for checker in self.checkers)
 
 
-class ArmController:
+class Arm:
     def __init__(
         self,
         setup: ParaScaraSetup,
@@ -136,3 +136,9 @@ class ArmController:
 
     def is_pos_valid(self, x: pqt, y: pqt, mode: str = "+-") -> bool:
         return self.workspace_checker.is_pos_valid(x, y, mode)
+    
+    def __enter__(self) -> Self:
+        return self
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        self.clean_up()

@@ -15,7 +15,7 @@ from web.response_manager import ResponseManager
 from web.events import ConfirmRequestEvent, ConfirmResponseEvent
 from src.mecanum_chassis import MecanumChassis
 from src.motor_controller import I2CticMotorController, StepMode
-from src.arm import ArmController
+from src.arm import Arm
 from src.consts import ur
 from src.kinematics import ParaScaraSetup
 from fastapi import WebSocket, WebSocketDisconnect
@@ -41,7 +41,7 @@ setup = ParaScaraSetup(
     rt_link_len=85 * ur.mm,
     axis_dist=55 * ur.mm,
 )
-arm_controller = ArmController(setup, lf_arm_motor, rf_arm_motor)
+arm_controller = Arm(setup, lf_arm_motor, rf_arm_motor)
 
 chassis = MecanumChassis(
     lf_tp_motor=lf_tp_motor, rt_tp_motor=rt_tp_motor,

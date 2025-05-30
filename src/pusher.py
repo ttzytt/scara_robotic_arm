@@ -3,7 +3,7 @@ from src.consts import vec2f
 
 
 class Pusher:
-    def __init__(self, pin: int, servo_rg: vec2f, _reversed: bool = False) -> None:
+    def __init__(self, pin: int, servo_rg: vec2f = (-1, 1), _reversed: bool = False) -> None:
         self.servo = Servo(pin)
         self.servo_rgp = servo_rg
         self.reversed = _reversed

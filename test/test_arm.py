@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.motor_controller import I2CticMotorController
-from src.arm import ArmController
+from src.arm import Arm
 from src.consts import *
 from src.kinematics import ParaScaraSetup
 
@@ -15,7 +15,7 @@ setup = ParaScaraSetup(
     rt_link_len=80 * ur.mm,
     axis_dist=55 * ur.mm,
 )
-arm_controller = ArmController(setup, lf_motor, rf_motor)
+arm_controller = Arm(setup, lf_motor, rf_motor)
 
 def main():
     init_pos = input("Enter the initial position of the arm (x mm, y mm): ")

@@ -14,7 +14,7 @@ sys.path.insert(
 )
 
 from src.motor_controller import I2CticMotorController, StepMode
-from src.arm import ArmController, LinkAngleChecker
+from src.arm import Arm, LinkAngleChecker
 from src.kinematics import ParaScaraSetup
 from src.consts import * 
 
@@ -32,7 +32,7 @@ AXIS_Y = 1
 
 # ---------------------------
 
-def init_arm() -> ArmController:
+def init_arm() -> Arm:
     # build your motors & kinematics just like your ref code
     lf_motor = I2CticMotorController(
         1, 15, True, step_mode=StepMode._8
@@ -49,9 +49,9 @@ def init_arm() -> ArmController:
         rt_link_len=85 * ur.mm,
         axis_dist=55 * ur.mm,
     )
-    return ArmController(setup, lf_motor, rf_motor, LinkAngleChecker())
+    return Arm(setup, lf_motor, rf_motor, LinkAngleChecker())
 
-def wait_for_reset(arm: ArmController):
+def wait_for_reset(arm: Arm):
     # same prompts as your reference
     while input(
         "Please move the two motors to perpendicular position and enter `y` to continue: "
