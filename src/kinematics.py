@@ -16,9 +16,9 @@ class ParaScaraSetup:
 
 @dataclass
 class ParaScaraState: 
-    end_effector_pos : tup_qq
-    lf_base_endpos   : tup_qq
-    rt_base_endpos   : tup_qq
+    end_effector_pos : vec2q
+    lf_base_endpos   : vec2q
+    rt_base_endpos   : vec2q
 
     lf_base_ang      : pqt
     rt_base_ang      : pqt
@@ -174,8 +174,8 @@ class ParaScaraKinematics:
             
             # TODO: add angle for second-level arm
 
-            lf_base_endpos : tup_qq = (cos(q1) * l1 * DEF_LEN_UNIT, sin(q1) * l1 * DEF_LEN_UNIT)
-            rt_base_endpos : tup_qq = ((cos(q2) * l1p + d) * DEF_LEN_UNIT, sin(q2) * l1p * DEF_LEN_UNIT)
+            lf_base_endpos : vec2q = (cos(q1) * l1 * DEF_LEN_UNIT, sin(q1) * l1 * DEF_LEN_UNIT)
+            rt_base_endpos : vec2q = ((cos(q2) * l1p + d) * DEF_LEN_UNIT, sin(q2) * l1p * DEF_LEN_UNIT)
             lf_link_ang = atan2(y - lf_base_endpos[1].magnitude, x - lf_base_endpos[0].magnitude)
             rt_link_ang = atan2(y - rt_base_endpos[1].magnitude, x - rt_base_endpos[0].magnitude)
             results.append(

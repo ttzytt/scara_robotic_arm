@@ -1,7 +1,8 @@
 from src.mecanum_chassis import MecanumChassis
-from src.arm_controller import ArmController
+from src.arm import ArmController
 from src.motor_controller import TicMotorController
-from dataclasses import dataclass
+from consts import pqt, ur, vec2q
+from typing import Callable, Optioanl
 
 class Robot: 
     def __init__(self, chassis: MecanumChassis, arm: ArmController):

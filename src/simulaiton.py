@@ -62,7 +62,7 @@ class ParaScaraSim:
         )
 
     @staticmethod 
-    def gen_vert_arm(wid : float, len_ : float, lower_end_pos: tup_ff , mass : float) -> tuple[pmk.Body, pmk.Shape]:
+    def gen_vert_arm(wid : float, len_ : float, lower_end_pos: vec2f , mass : float) -> tuple[pmk.Body, pmk.Shape]:
         moment = pmk.moment_for_box(mass, (wid, wid))
         body = pmk.Body(mass, moment, body_type=pmk.Body.DYNAMIC)
         shape = pmk.Poly.create_box(body, (wid, len_))
@@ -70,7 +70,7 @@ class ParaScaraSim:
         return body, shape
     
     @staticmethod
-    def gen_arm_connecting(a : tup_ff, b : tup_ff, mass : float, wid : float) -> tuple[pmk.Body, pmk.Shape]:
+    def gen_arm_connecting(a : vec2f, b : vec2f, mass : float, wid : float) -> tuple[pmk.Body, pmk.Shape]:
         moment = pmk.moment_for_box(mass, (wid, wid))
         body = pmk.Body(mass, moment, body_type=pmk.Body.DYNAMIC)
         len_ = dist2d(a, b)

@@ -14,7 +14,7 @@ from web.response_manager import ResponseManager
 from web.events import ConfirmRequestEvent, ConfirmResponseEvent
 from src.mecanum_chassis import MecanumChassis
 from src.motor_controller import I2CticMotorController, StepMode
-from src.arm_controller import ArmController
+from src.arm import ArmController
 from src.consts import ur
 from src.kinematics import ParaScaraSetup
 

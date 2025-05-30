@@ -1,8 +1,8 @@
-from src.consts import tup_ff
+from src.consts import vec2f
 from math import sqrt, pi, atan2, acos
 from time import time
 
-def dist2d(a : tup_ff, b : tup_ff) -> float:
+def dist2d(a : vec2f, b : vec2f) -> float:
     return sqrt((a[0] - b[0])**2 + (a[1] - b[1])**2)
 
 def to_rad(deg : float) -> float:

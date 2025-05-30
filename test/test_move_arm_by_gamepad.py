@@ -14,7 +14,7 @@ sys.path.insert(
 )
 
 from src.motor_controller import I2CticMotorController, StepMode
-from src.arm_controller import ArmController
+from src.arm import ArmController, LinkAngleChecker
 from src.kinematics import ParaScaraSetup
 from src.consts import * 
 
@@ -49,7 +49,7 @@ def init_arm() -> ArmController:
         rt_link_len=85 * ur.mm,
         axis_dist=55 * ur.mm,
     )
-    return ArmController(setup, lf_motor, rf_motor)
+    return ArmController(setup, lf_motor, rf_motor, LinkAngleChecker())
 
 def wait_for_reset(arm: ArmController):
     # same prompts as your reference
@@ -122,7 +122,7 @@ def main():
 
             # f) send new target to arm
             try:
-                if arm.check_link_stuck_if_moved_to(target_x * ur.mm, target_y * ur.mm):
+                if arm.is_pos_valid(target_x * ur.mm, target_y * ur.mm):
                     print(f"⚠️ Arm is stuck. With angle between link={arm.get_link_ang_diff().to(ur.deg)} Please move to other positions")
                     target_x -= dx
                     target_y -= dy
