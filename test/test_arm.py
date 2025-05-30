@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.motor_controller import I2CticMotorController
 from src.arm import Arm
-from src.consts import *
+from src.consts import ur
 from src.kinematics import ParaScaraSetup
 
 lf_motor = I2CticMotorController(1, 14, True)

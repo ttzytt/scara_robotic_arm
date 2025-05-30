@@ -1,6 +1,6 @@
 from src.motor_controller import TicMotorController
 from src.kinematics import ParaScaraKinematics, ParaScaraSetup, ParaScaraState
-from typing import Optional, Self
+from typing import Optional, Self, override
 from src.utils import get_unsigned_ang_between
 from src.consts import pqt, ur, DEF_LEN_UNIT
 from math import pi
@@ -38,25 +38,30 @@ class LinkAngleChecker(ArmWorkspaceChecker):
         ang = get_unsigned_ang_between(vl_x, vl_y, vr_x, vr_y) * ur.rad
         return ang % (2 * ur.pi)
 
+    @override
     def is_state_valid(self, state: ParaScaraState) -> bool:
         """Return True if the link‐angle is far enough from straight (not stuck)."""
         ang_between = self.get_link_ang_diff(state)
         ang_diff = abs(ang_between - pi * ur.rad)
         return ang_diff >= self.threshold_ang
 
+    @override
     def is_pos_valid(self, x: pqt, y: pqt, mode: str = "+-") -> bool:
         """Inverse‐kinematics then check the resulting state."""
         state = self.kine_solver.inverse_kinematics(x, y, mode)[0]
         return self.is_state_valid(state)
 
 class NoChecker(ArmWorkspaceChecker):
+
+    @override
     def is_state_valid(self, state: ParaScaraState) -> bool:
         # TODO: log warning here
         print("WARNING: No workspace checker is set, assuming all states are valid.")
         return True
 
+    @override
     def is_pos_valid(self, x: pqt, y: pqt, mode: str = "+-") -> bool:
-        # TOOD: log warning here
+        # TODO: log warning here
         print("WARNING: No workspace checker is set, assuming all positions are valid.")
         return True
 
@@ -66,9 +71,11 @@ class CombinedChecker(ArmWorkspaceChecker):
             raise ValueError("At least one checker must be provided.")
         self.checkers = checkers
 
+    @override
     def is_state_valid(self, state: ParaScaraState) -> bool:
         return all(checker.is_state_valid(state) for checker in self.checkers)
 
+    @override
     def is_pos_valid(self, x: pqt, y: pqt, mode: str = "+-") -> bool:
         return all(checker.is_pos_valid(x, y, mode) for checker in self.checkers)
 

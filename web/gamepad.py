@@ -1,5 +1,5 @@
 import json
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from typing import Any, Self, Sequence, override
 from web.events import BrowserEvent
 from src.utils import get_time_millis
@@ -31,6 +31,15 @@ class GamepadState:
     dpad_down: GamepadBtn
     dpad_left: GamepadBtn
     dpad_right: GamepadBtn
+
+    def filter_deadzone(self, deadzone : float = 0.05) -> Self:
+        return replace(
+            self,
+            left_stick_x  = self.left_stick_x  if abs(self.left_stick_x) >= deadzone else 0.0,
+            left_stick_y  = self.left_stick_y  if abs(self.left_stick_y) >= deadzone else 0.0,
+            right_stick_x = self.right_stick_x if abs(self.right_stick_x) >= deadzone else 0.0,
+            right_stick_y = self.right_stick_y if abs(self.right_stick_y) >= deadzone else 0.0,
+        )
 
 @dataclass
 class GamepadMeta:

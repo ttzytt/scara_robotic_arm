@@ -4,7 +4,7 @@ import numpy as np
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 from src.motor_controller import I2CticMotorController, StepMode
 from src.arm import Arm
-from src.consts import *
+from src.consts import ur
 from src.kinematics import ParaScaraSetup
 import time
 lf_motor = I2CticMotorController(1, 15, True, step_mode=StepMode._8)

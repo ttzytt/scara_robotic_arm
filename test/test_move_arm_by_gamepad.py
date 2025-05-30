@@ -16,7 +16,7 @@ sys.path.insert(
 from src.motor_controller import I2CticMotorController, StepMode
 from src.arm import Arm, LinkAngleChecker
 from src.kinematics import ParaScaraSetup
-from src.consts import * 
+from src.consts import ur
 
 # --- CONFIGURABLE PARAMS ---
 # maximum Cartesian speed (mm/s) when stick is pushed all the way
