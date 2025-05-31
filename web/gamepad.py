@@ -1,56 +1,24 @@
-import json
 from dataclasses import dataclass, replace
-from typing import Any, Self, Sequence, override
+from dataclasses_json import DataClassJsonMixin
 from web.events import BrowserEvent
-from src.utils import get_time_millis
-# 1) Dataclasses
+from typing import Self, Any
 
-@dataclass
-class GamepadBtn:
+
+@dataclass(kw_only=True)
+class GamepadBtn(DataClassJsonMixin):
     pressed: bool
     value: float
     touched: bool
 
-@dataclass
-class GamepadState:
-    left_stick_x: float
-    left_stick_y: float
-    right_stick_x: float
-    right_stick_y: float
-    left_trigger: float | GamepadBtn
-    right_trigger: float | GamepadBtn
-    btn_a: GamepadBtn
-    btn_b: GamepadBtn
-    btn_x: GamepadBtn
-    btn_y: GamepadBtn
-    btn_lb: GamepadBtn
-    btn_rb: GamepadBtn
-    btn_back: GamepadBtn
-    btn_start: GamepadBtn
-    dpad_up: GamepadBtn
-    dpad_down: GamepadBtn
-    dpad_left: GamepadBtn
-    dpad_right: GamepadBtn
-
-    def filter_deadzone(self, deadzone : float = 0.05) -> Self:
-        return replace(
-            self,
-            left_stick_x  = self.left_stick_x  if abs(self.left_stick_x) >= deadzone else 0.0,
-            left_stick_y  = self.left_stick_y  if abs(self.left_stick_y) >= deadzone else 0.0,
-            right_stick_x = self.right_stick_x if abs(self.right_stick_x) >= deadzone else 0.0,
-            right_stick_y = self.right_stick_y if abs(self.right_stick_y) >= deadzone else 0.0,
-        )
-
-@dataclass
-class GamepadMeta:
-    _id: str
+@dataclass(kw_only=True)
+class GamepadRawState(BrowserEvent):
+    name: str = "gamepad_raw_state"
+    id: str
     index: int
-    timestamp: float
-    connected: bool
-    mapping: str
+    axes: list[float]
+    buttons: list[GamepadBtn]
 
-# 2) Default mapping for the “standard” layout
-DefaultMapping: dict[str, dict[str, int]] = {
+DEFAULT_GPAD_MAPPING: dict[str, dict[str, int]] = {
     "axes": {
         "left_stick_x": 0,
         "left_stick_y": 1,
@@ -76,90 +44,52 @@ DefaultMapping: dict[str, dict[str, int]] = {
     }
 }
 
-# 3) The parser
-class GamepadParser:
-    def __init__(self, mapping: dict[str, dict[str, int]] = DefaultMapping):
-        self.ax_map  : dict[str, int] = mapping.get("axes", {})
-        self.btn_map : dict[str, int] = mapping.get("buttons", {})
-
-    def _parse_btn(self, raw: Any) -> GamepadBtn:
-        assert isinstance(raw, dict), f"Expected dict, got {type(raw)}"
-        return GamepadBtn(
-            pressed=raw["pressed"],
-            value=raw["value"],
-            touched=raw["touched"]
-        )
-
-    def _parse_trigger(
-        self,
-        axes: Sequence[float],
-        buttons: Sequence[dict[str, Any]],
-        name: str
-    ) -> float | GamepadBtn:
-        # 1) Try axes first
-        if name in self.ax_map:
-            return float(axes[self.ax_map[name]])
-        # 2) Then buttons
-        if name in self.btn_map:
-            return self._parse_btn(buttons[self.btn_map[name]])
-        # 3) Fallback
-        return 0.0
-
-    def parse_full(self, raw: dict[str, Any]) -> tuple[GamepadMeta, GamepadState]:
-        meta = GamepadMeta(
-            _id        = raw["id"],
-            index     = raw["index"],
-            timestamp = raw["timestamp"],
-            connected = raw["connected"],
-            mapping   = raw["mapping"],
-        )
-        axes    : list[float]= raw["axes"]
-        buttons : list[dict[str, Any]] = raw["buttons"] # from json sent from JS
-
-        state = GamepadState(
-            left_stick_x  = axes[self.ax_map["left_stick_x"]],
-            left_stick_y  = axes[self.ax_map["left_stick_y"]],
-            right_stick_x = axes[self.ax_map["right_stick_x"]],
-            right_stick_y = axes[self.ax_map["right_stick_y"]],
-            # <-- dynamic trigger parsing!
-            left_trigger  = self._parse_trigger(axes, buttons, "left_trigger"),
-            right_trigger = self._parse_trigger(axes, buttons, "right_trigger"),
-            btn_a   = self._parse_btn(buttons[self.btn_map["btn_a"]]),
-            btn_b   = self._parse_btn(buttons[self.btn_map["btn_b"]]),
-            btn_x   = self._parse_btn(buttons[self.btn_map["btn_x"]]),
-            btn_y   = self._parse_btn(buttons[self.btn_map["btn_y"]]),
-            btn_lb  = self._parse_btn(buttons[self.btn_map["btn_lb"]]),
-            btn_rb  = self._parse_btn(buttons[self.btn_map["btn_rb"]]),
-            btn_back  = self._parse_btn(buttons[self.btn_map["btn_back"]]),
-            btn_start = self._parse_btn(buttons[self.btn_map["btn_start"]]),
-            dpad_up    = self._parse_btn(buttons[self.btn_map["dpad_up"]]),
-            dpad_down  = self._parse_btn(buttons[self.btn_map["dpad_down"]]),
-            dpad_left  = self._parse_btn(buttons[self.btn_map["dpad_left"]]),
-            dpad_right = self._parse_btn(buttons[self.btn_map["dpad_right"]]),
-        )
-
-        return meta, state
-
-@dataclass
-class GamepadEvent(BrowserEvent):
-    state: GamepadState
-    meta:  GamepadMeta
+@dataclass(kw_only=True)
+class GamepadState:
+    left_stick_x: float
+    left_stick_y: float
+    right_stick_x: float
+    right_stick_y: float
+    left_trigger: GamepadBtn
+    right_trigger: GamepadBtn
+    btn_a: GamepadBtn
+    btn_b: GamepadBtn
+    btn_x: GamepadBtn
+    btn_y: GamepadBtn
+    btn_lb: GamepadBtn
+    btn_rb: GamepadBtn
+    btn_back: GamepadBtn
+    btn_start: GamepadBtn
+    dpad_up: GamepadBtn
+    dpad_down: GamepadBtn
+    dpad_left: GamepadBtn
+    dpad_right: GamepadBtn
 
     @classmethod
-    @override
-    def deserialize(
-        cls,
-        json_str: str,
-        received_t : int = get_time_millis(),
-        mapping: dict[str, dict[str, int]] = DefaultMapping,
+    def from_raw(
+        cls, raw_state: GamepadRawState, mapping: dict[str, dict[str, int]] = DEFAULT_GPAD_MAPPING
     ) -> Self:
-        raw = json.loads(json_str)
-        parser = GamepadParser(mapping)
-        meta, state = parser.parse_full(raw)
-        return cls(
-            name  = "gamepad_upate",
-            meta  = meta,
-            state = state,
-            received_t = received_t,
-        )
+        values: dict[str, Any] = {}
 
+        axes_map = mapping.get("axes", {})
+        for axis_name, axis_index in axes_map.items():
+            if axis_index < 0 or axis_index >= len(raw_state.axes):
+                raise IndexError(f"axes index {axis_index} out of range")
+            values[axis_name] = float(raw_state.axes[axis_index])
+
+        btn_map = mapping.get("buttons", {})
+        for btn_name, btn_index in btn_map.items():
+            if btn_index < 0 or btn_index >= len(raw_state.buttons):
+                raise IndexError(f"buttons index {btn_index} out of range")
+            values[btn_name] = raw_state.buttons[btn_index]
+
+        return cls(**values)
+
+    def filter_deadzone(self, deadzone: float = 0.05) -> Self:
+        return replace(
+            self,
+            left_stick_x=self.left_stick_x if abs(self.left_stick_x) > deadzone else 0.0,
+            left_stick_y=self.left_stick_y if abs(self.left_stick_y) > deadzone else 0.0,
+            right_stick_x=self.right_stick_x if abs(self.right_stick_x) > deadzone else 0.0,
+            right_stick_y=self.right_stick_y if abs(self.right_stick_y) > deadzone else 0.0,
+        )

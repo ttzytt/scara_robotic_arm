@@ -1,7 +1,7 @@
 from dataclasses import dataclass, field
-from abc import ABC, abstractmethod
+from abc import ABC
 from typing import Self, ClassVar, Type, Literal
-from dataclasses_json import dataclass_json, DataClassJsonMixin, config, Exclude
+from dataclasses_json import DataClassJsonMixin, config, Exclude
 from src.utils import get_time_millis
 
 @dataclass(kw_only=True)
@@ -12,7 +12,7 @@ class EventMeta(ABC):
 
 @dataclass(kw_only=True)
 class BrowserEvent(EventMeta, DataClassJsonMixin, ABC):
-    received_t: int
+    received_t: int = field(default_factory=get_time_millis)
     generated_t: int = field(init=False, default=-1)
 
     @classmethod

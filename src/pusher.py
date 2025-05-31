@@ -7,6 +7,7 @@ class Pusher:
         self.servo = Servo(pin)
         self.servo_rgp = servo_rg
         self.reversed = _reversed
+        self.retract()
 
     def map_to_servo_val(self, val: float) -> float:
         """ 

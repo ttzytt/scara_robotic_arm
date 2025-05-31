@@ -8,14 +8,17 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
-from web.gamepad import GamepadParser, GamepadState
+from web.gamepad import GamepadRawState, GamepadState, DEFAULT_GPAD_MAPPING
 from web.response_manager import ResponseManager
-from web.events import ConfirmRequestEvent, ConfirmResponseEvent
+from web.events import ConfirmRequestEvent
 from web.teleop import CombinedTeleop, ChassisTeleop, ArmTeleop, PusherTeleop
 from web.video import gen_frames
 
 from src.robot import DEFAULT_ROBOT  
 from src.consts import ur
+from src.utils import get_time_millis
+
+import time
 
 robot = DEFAULT_ROBOT  
 app = FastAPI()
@@ -29,9 +32,6 @@ teleop = CombinedTeleop(
     ArmTeleop(robot, start_pos=(0 * ur.mm, 100 * ur.mm), max_speed=20 * ur.mm),
     PusherTeleop(robot),
 )
-
-parser = GamepadParser()
-
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
@@ -59,11 +59,16 @@ async def websocket_endpoint(ws: WebSocket):
     await rmngr.send_and_wait(req2)  
 
     try:
-        with robot as r:
+        with robot as _:
             while True:
+                st = time.time()
                 raw = await queue.get()
-                _, state = parser.parse_full(json.loads(raw))
-                teleop.update(state)
+                raw_state = GamepadRawState.deserialize(raw)
+                gs = GamepadState.from_raw(raw_state, DEFAULT_GPAD_MAPPING)
+                print("gamepad latency(ms): ", raw_state.latency)
+                teleop.update(gs)
+                ed = time.time()
+                print(f"Main loop processed in {ed - st:.4f} seconds")
 
     except WebSocketDisconnect:
         task.cancel()

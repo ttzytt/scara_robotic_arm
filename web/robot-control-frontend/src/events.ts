@@ -1,43 +1,64 @@
-// src/event.ts
+// src/events.ts
 
-export type EventMeta = {
+export interface EventMeta {
     name: string;
     generated_t: number;
     eid: number;
-};
-
-export type ServerEvent = EventMeta;
-
-export type BrowserEvent = EventMeta & {
-    received_t: number;
-};
+}
 
 export type ConfirmType = 'ok' | 'cancel' | 'both';
 
-export type ConfirmRequestEvent = ServerEvent & {
+export interface ServerEvent extends EventMeta {
+    received_t: number;
+}
+
+export interface BrowserEvent extends EventMeta {
+    // No received_t here.
+}
+
+export interface ConfirmRequestEvent extends ServerEvent {
     name: 'confirm_request';
     msg: string;
     require_confirm: ConfirmType;
-};
+}
 
-export type ConfirmResponseEvent = BrowserEvent & {
+export interface ConfirmResponseEvent extends BrowserEvent {
     name: 'confirm_response';
     respond_to_eid: number;
     response: ConfirmType;
-};
+}
 
-export type AnyServerEvent = ConfirmRequestEvent;
+export interface GamepadBtn {
+    pressed: boolean;
+    value: number;
+    touched: boolean;
+}
 
+export interface GamepadRawState extends BrowserEvent {
+    name: 'gamepad_raw_state';
+    id: string;
+    index: number;
+    axes: number[];
+    buttons: GamepadBtn[];
+}
+
+
+// ------------------ Utility Functions ------------------
+
+/**
+ * Parse a JSON string from WebSocket into a ConfirmRequestEvent.
+ * Throws an Error if the event name is not 'confirm_request'.
+ * 
+ * @param json raw JSON from the WebSocket
+ * @returns a typed ConfirmRequestEvent
+ */
 export function parseServerEvent(json: string): ConfirmRequestEvent {
-    const base = JSON.parse(json) as ServerEvent;
-    const received_t = Date.now();
-    // unknown assertion because TS cannot verify
-    const evt = { ...base, received_t } as unknown as ConfirmRequestEvent;
-
-    if (evt.name !== 'confirm_request') {
-        throw new Error(`Expected confirm_request, got ${evt.name}`);
+    const base = JSON.parse(json) as EventMeta & Partial<ConfirmRequestEvent>;
+    if (base.name !== 'confirm_request') {
+        throw new Error(`Expected confirm_request, got ${base.name}`);
     }
-    return evt;
+    // We know it's ConfirmRequestEvent, but TS cannot verify at compile time:
+    return base as ConfirmRequestEvent;
 }
 
 export function nextEid(): number {
@@ -48,3 +69,4 @@ export function nextEid(): number {
 export namespace nextEid {
     export let eid = 0;
 }
+  

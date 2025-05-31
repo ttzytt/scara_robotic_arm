@@ -17,6 +17,7 @@ from src.motor_controller import I2CticMotorController, StepMode
 from src.arm import Arm, LinkAngleChecker
 from src.kinematics import ParaScaraSetup
 from src.consts import ur
+import time
 
 # --- CONFIGURABLE PARAMS ---
 # maximum Cartesian speed (mm/s) when stick is pushed all the way
@@ -91,6 +92,7 @@ def main():
         clock = pygame.time.Clock()
         running = True
         while running:
+            st_time = time.time()
             # a) handle quit
             for evt in pygame.event.get():
                 if evt.type == pygame.QUIT:
@@ -161,6 +163,8 @@ def main():
                   f"Actual: ({cur_x:.1f}, {cur_y:.1f}) mm")
 
             # h) cap loop rate
+            ed_time = time.time() 
+            print(f"Loop time: {ed_time - st_time:.3f} s")
             clock.tick(60)
 
     finally:

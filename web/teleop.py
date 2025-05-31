@@ -37,12 +37,14 @@ class ArmTeleop(TeleopController):
         self.target_x, self.target_y = start_pos
         self.last_time = time.time()
         self.prev_state = self.robot.arm.get_current_state(mode="o")[0]
+        self.moved_to_start = False
 
     @override
     def update(self, gamepad_state: GamepadState) -> None:
-        print("btn_rb pressed:", gamepad_state.btn_rb.pressed)
-        if not gamepad_state.btn_rb.pressed:
+        st_time = time.time()
+        if not gamepad_state.btn_lb.pressed and self.moved_to_start:
             return
+        self.moved_to_start = True
         gamepad_state = gamepad_state.filter_deadzone(0.05)
 
         raw_x = gamepad_state.right_stick_x
@@ -72,6 +74,8 @@ class ArmTeleop(TeleopController):
         self.target_x, self.target_y = new_x, new_y
         self.robot.arm.move_to_pos(self.target_x, self.target_y)
 
+        ed_time = time.time()
+        print("arm teleop update time: ", ed_time - st_time)
         try:
             self.prev_state = self.robot.arm.get_current_state(mode="oi")[0]
         except IndexError:
@@ -90,7 +94,7 @@ class ChassisTeleop(TeleopController):
         vy = gamepad_state.left_stick_x * self.coef
         h = gamepad_state.right_stick_x * self.coef
 
-        if gamepad_state.btn_rb.pressed:
+        if gamepad_state.btn_lb.pressed:
             h = 0.0  # prevent confict with arm control
 
         self.robot.chassis.move(vx, vy, h)
