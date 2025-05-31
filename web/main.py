@@ -15,7 +15,6 @@ from web.video import gen_frames
 
 from src.robot import DEFAULT_ROBOT
 from src.consts import ur
-from icecream import ic
 
 app = FastAPI()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))

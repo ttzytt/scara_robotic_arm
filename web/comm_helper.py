@@ -3,7 +3,6 @@ import json
 from typing import Dict, Tuple, Any, Type
 from fastapi import WebSocket, WebSocketDisconnect
 from web.events import EventMeta, RequestEvent, ResponseEvent
-from icecream import ic
 
 
 class CommHelper:
@@ -76,12 +75,7 @@ class CommHelper:
         try:
             while True:
                 raw_str = await self.websocket.receive_text()
-                try:
-                    json_data = json.loads(raw_str)
-                except json.JSONDecodeError:
-                    # Invalid JSON → enqueue to FIFO
-                    await self.queue.put(raw_str)
-                    continue
+                json_data = json.loads(raw_str)
 
                 evt_name = json_data.get("name")
                 # Ensure evt_name is a registered event name
