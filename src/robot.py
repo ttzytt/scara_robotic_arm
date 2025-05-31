@@ -31,7 +31,7 @@ def _get_default_robot() -> Robot:
         bus_num=1, address=14, is_reversed=True, step_mode=StepMode._4
     )
 
-    CURRENT_LIMIT = 8
+    CURRENT_LIMIT = 9
     lf_step_motor.tic.set_current_limit(CURRENT_LIMIT)
     rt_step_motor.tic.set_current_limit(CURRENT_LIMIT)
 

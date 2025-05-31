@@ -20,7 +20,7 @@ class ArmWorkspaceChecker(ABC):
         """ Check if the given position of end effector is in the workspace """
 
 class LinkAngleChecker(ArmWorkspaceChecker):
-    def __init__(self, setup: ParaScaraSetup, threshold_ang: pqt = 7 * ur.deg):
+    def __init__(self, setup: ParaScaraSetup, threshold_ang: pqt = 10 * ur.deg):
         super().__init__(setup)
         self.threshold_ang = threshold_ang
 

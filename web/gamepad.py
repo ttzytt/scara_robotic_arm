@@ -1,7 +1,7 @@
 from dataclasses import dataclass, replace
 from dataclasses_json import DataClassJsonMixin
 from web.events import BrowserEvent
-from typing import Self, Any
+from typing import Self, Any, ClassVar
 
 
 @dataclass(kw_only=True)
@@ -12,7 +12,8 @@ class GamepadBtn(DataClassJsonMixin):
 
 @dataclass(kw_only=True)
 class GamepadRawState(BrowserEvent):
-    name: str = "gamepad_raw_state"
+    name: ClassVar[str] = "gamepad_raw_state"
+    use_latest: ClassVar[bool] = True
     id: str
     index: int
     axes: list[float]

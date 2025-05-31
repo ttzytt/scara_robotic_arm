@@ -1,7 +1,6 @@
-# web/main.py
 import os
-import json
 import asyncio
+import time
 
 import uvicorn
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
@@ -9,69 +8,69 @@ from fastapi.responses import StreamingResponse
 from fastapi.staticfiles import StaticFiles
 
 from web.gamepad import GamepadRawState, GamepadState, DEFAULT_GPAD_MAPPING
-from web.response_manager import ResponseManager
+from web.comm_helper import CommHelper
 from web.events import ConfirmRequestEvent
 from web.teleop import CombinedTeleop, ChassisTeleop, ArmTeleop, PusherTeleop
 from web.video import gen_frames
 
-from src.robot import DEFAULT_ROBOT  
+from src.robot import DEFAULT_ROBOT
 from src.consts import ur
-from src.utils import get_time_millis
+from icecream import ic
 
-import time
-
-robot = DEFAULT_ROBOT  
 app = FastAPI()
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 STATIC_DIR = os.path.join(BASE_DIR, "static")
 print("Serving static files from:", STATIC_DIR)
 
+
+# Create the robot and teleop controllers
+robot = DEFAULT_ROBOT
 teleop = CombinedTeleop(
     robot,
     ChassisTeleop(robot, coef=1.0),
-    ArmTeleop(robot, start_pos=(0 * ur.mm, 100 * ur.mm), max_speed=20 * ur.mm),
+    ArmTeleop(robot, start_pos=(0 * ur.mm, 100 * ur.mm), max_speed=200.0 * ur.mm),
     PusherTeleop(robot),
 )
+
 
 @app.websocket("/ws")
 async def websocket_endpoint(ws: WebSocket):
     await ws.accept()
-    rmngr = ResponseManager(ws)
-    recv = rmngr.receive_loop()
-    queue: asyncio.Queue[str] = asyncio.Queue()
-
-    async def pump():
-        async for msg in recv:
-            queue.put_nowait(msg)
-
-    task = asyncio.create_task(pump())
+    rmngr = CommHelper(ws)
+    recv_task = asyncio.create_task(rmngr.receive_loop())
 
     req1 = ConfirmRequestEvent(
         msg="Please move both motors to perpendicular position.", require_confirm="ok"
     )
     await rmngr.send_and_wait(req1)
     teleop.robot.arm.reset_deg(90, 90)
-    print("deg reset to (90, 90)")
+    print("Arm reset to (90, 90)")
 
     req2 = ConfirmRequestEvent(
         msg="Ready to start joystick control?", require_confirm="ok"
     )
-    await rmngr.send_and_wait(req2)  
-
+    await rmngr.send_and_wait(req2)
+    print("Joystick control ready")
     try:
-        with robot as _:
+        with robot:
             while True:
-                st = time.time()
-                raw = await queue.get()
-                raw_state = GamepadRawState.deserialize(raw)
+                start_time = time.time()
+
+                raw_json = await rmngr.pop_latest(GamepadRawState)
+                try:
+                    raw_state = GamepadRawState.deserialize(raw_json)
+                except Exception:
+                    print("Ignored non-gamepad event:", raw_json)
+                    continue
+                print("Gamepad latency (ms):", raw_state.latency)
                 gs = GamepadState.from_raw(raw_state, DEFAULT_GPAD_MAPPING)
-                print("gamepad latency(ms): ", raw_state.latency)
                 teleop.update(gs)
-                ed = time.time()
-                print(f"Main loop processed in {ed - st:.4f} seconds")
+                
+                end_time = time.time()
+                print(f"Main loop processed in {end_time - start_time:.4f} seconds")
 
     except WebSocketDisconnect:
-        task.cancel()
+        recv_task.cancel()
         print("WebSocket disconnected")
 
 

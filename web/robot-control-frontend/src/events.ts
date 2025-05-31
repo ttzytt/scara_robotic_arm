@@ -57,6 +57,7 @@ export function parseServerEvent(json: string): ConfirmRequestEvent {
     if (base.name !== 'confirm_request') {
         throw new Error(`Expected confirm_request, got ${base.name}`);
     }
+    base.received_t = Date.now(); // Fill in received_t for server events
     // We know it's ConfirmRequestEvent, but TS cannot verify at compile time:
     return base as ConfirmRequestEvent;
 }
