@@ -18,7 +18,7 @@ def gen_frames():
             next_to_check_idx = (next_to_check_idx + 1) % len(check_cam_idxs)
 
             # Ask the camera to deliver MJPEG natively, reducing CPU work
-            fourcc = cv2.VideoWriter_fourcc(*"MJPG")
+            fourcc = cv2.VideoWriter.fourcc(*"MJPG")
             cap.set(cv2.CAP_PROP_FOURCC, fourcc)
             cap.set(cv2.CAP_PROP_FRAME_WIDTH, 1280)
             cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 720)
